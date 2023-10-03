@@ -1,26 +1,27 @@
-#include <iostream>
-#include <sys/types.h>
-#include <sys/stat.h>
-#include <fcntl.h>
+#include "color.hh"
+#include "vec3.hh"
 
 int main() {
-    int nx = 200;
-    int ny = 100;
-    std::cout << "P3\n" << nx << " " << ny << "\n255\n";
+    int nx = 256;
+    int ny = 256;
+    std::ofstream out("image.ppm");
 
-    int fd = open("./image.ppm", O_CREAT);
-    
+    out.write("P3\n", 3);
+    out.write(std::to_string(nx).c_str(), std::to_string(nx).length());
+    out.write(" ", 1);
+    out.write(std::to_string(ny).c_str(), std::to_string(ny).length());
+    out.write("\n", 1);
+    out.write("255\n", 4);
 
-
-    for(int i = ny - 1; i >= 0; i--) {
-        for (int j = 0; j < nx; j++) {
-            float r = float(i) / float(nx);
-            float g = float(j) / float(ny);
-            float b = 0.2f;
-            int ir = int(255.99 * r);
-            int ig = int(255.99 * i);
-            int ib = int(255.99 * b);
-            std::cout << ir << " " << ig << " " << ib << "\n";
+    for (int j = 0; j < ny; ++j) {
+        std::clog << "\rScanlines remaining: " << ny - j << std::flush;
+        for (int i = 0; i < nx; ++i) {
+            color pixel_color(double(i) / (nx-1), double(j) / (ny-1), 0.25);
+            out << static_cast<int>(255.999 * pixel_color.x()) << ' '
+                << static_cast<int>(255.999 * pixel_color.y()) << ' '
+                << static_cast<int>(255.999 * pixel_color.z()) << '\n';
         }
     }
+    std::clog << "\nDone.\n";
+    out.close();
 }
