@@ -1,0 +1,17 @@
+# Ignore all non-code files
+*
+
+# Except these file types
+!*.cc
+!*.cpp
+!*.hh
+!*.hpp
+!*.py
+!*.js
+!*.html
+!*.css
+!*.md
+!LICENSE
+!README.md
+!*.vscode/*
+!*.gitignore
