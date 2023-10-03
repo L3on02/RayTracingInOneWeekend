@@ -2,17 +2,30 @@
 #include "ray.hh"
 #include "vec3.hh"
 
+// checks for hits of ray with sphere
+bool hit_sphere(const point3& center, double radius, const ray& r) {
+    vec3 oc = r.origin() - center; // vector from center of sphere to ray origin
+    auto a = dot(r.direction(), r.direction()); // dot product of ray direction with itself
+    auto b = 2.0 * dot(oc, r.direction()); // dot product of vector from center to ray origin with ray direction
+    auto c = dot(oc, oc) - radius * radius; // dot product of vector from center to ray origin with itself minus radius squared
+    auto discriminant = b*b - 4*a*c; // discriminant of quadratic equation
+    return discriminant >= 0; // if discriminant is greater than 0, there are two solutions, i.e. the ray hits the sphere
+}
+
 // returns color for a given ray
 color ray_color(const ray& r) {
+    if(hit_sphere(point3(0, 0, -1), 0.5, r)) // if ray hits sphere, return red
+        return color(1, 0, 0);
+
     vec3 unit_direction = unit_vector(r.direction()); // normalize ray direction
     auto a = 0.5 * (unit_direction.y() + 1.0); // scale y component of ray direction to [0, 1] (creates a fade from blue to white)
-    return (1.0-a)*color(1.0,1.0,1.0) + a*color(0.5, 0.7, 1.0); // 1,1,1 is start color and 0.5,0.7,1.0 is end color
+    return (1.0 - a) * color(1.0, 1.0, 1.0) + a * color(0.5, 0.7, 1.0); // 1,1,1 is start color and 0.5,0.7,1.0 is end color
 }
 
 int main() {
     // image dimensions
     auto aspect_ratio = 16.0 / 9.0;
-    int image_width = 256;
+    int image_width = 800;
     int image_height = static_cast<int>(image_width / aspect_ratio);
     image_height = image_height >= 1 ? image_height : 1;
 
