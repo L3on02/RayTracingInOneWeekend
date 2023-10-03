@@ -3,19 +3,31 @@
 #include "vec3.hh"
 
 // checks for hits of ray with sphere
-bool hit_sphere(const point3& center, double radius, const ray& r) {
+double hit_sphere(const point3& center, double radius, const ray& r) {
     vec3 oc = r.origin() - center; // vector from center of sphere to ray origin
-    auto a = dot(r.direction(), r.direction()); // dot product of ray direction with itself
-    auto b = 2.0 * dot(oc, r.direction()); // dot product of vector from center to ray origin with ray direction
-    auto c = dot(oc, oc) - radius * radius; // dot product of vector from center to ray origin with itself minus radius squared
-    auto discriminant = b*b - 4*a*c; // discriminant of quadratic equation
-    return discriminant >= 0; // if discriminant is greater than 0, there are two solutions, i.e. the ray hits the sphere
+
+    // t^2*v⋅v  +  2tv⋅(A−C)  +  (A−C)⋅(A−C)−r2 = 0
+    // a = v⋅v   b = 2v⋅(A-C)    c = (A-C)⋅(A-C)-r2
+    // 2 is factored out of b to simplify calculation:
+
+    auto a = r.direction().length_squared(); // dot product of ray direction with itself
+    auto half_b = dot(oc, r.direction()); // dot product of vector from center to ray origin with ray direction
+    auto c = oc.length_squared() - radius * radius; // same as dot product only faster
+    auto discriminant = half_b*half_b - a*c; // discriminant of quadratic equation (upper part of abc formula)
+
+    if(discriminant < 0) // if discriminant is negative, ray does not hit sphere (euqation has no real solutions)
+        return -1.0;
+    else
+        return (-half_b - sqrt(discriminant)) / a; // return distance to hit point
 }
 
 // returns color for a given ray
 color ray_color(const ray& r) {
-    if(hit_sphere(point3(0, 0, -1), 0.5, r)) // if ray hits sphere, return red
-        return color(1, 0, 0);
+    auto t = hit_sphere(point3(0, 0, -1), 0.5, r); // check if ray hits sphere
+    if(t > 0.0) {// if ray hits sphere, return red
+        vec3 N = unit_vector(r.at(t) - vec3(0, 0, -1)); // calculate normal vector at hit point
+        return 0.5 * color(N.x() + 1, N.y() + 1, N.z() + 1); // scale normal vector to [0, 1] and return as color
+    }
 
     vec3 unit_direction = unit_vector(r.direction()); // normalize ray direction
     auto a = 0.5 * (unit_direction.y() + 1.0); // scale y component of ray direction to [0, 1] (creates a fade from blue to white)

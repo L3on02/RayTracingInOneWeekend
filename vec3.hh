@@ -41,7 +41,7 @@ class vec3 {
             return *this *= 1/t;
         }
 
-        double lenth_squared() const {
+        double length_squared() const {
             return e[0]*e[0] + e[1]*e[1] + e[2]*e[2];
         }
 
