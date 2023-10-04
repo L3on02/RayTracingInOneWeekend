@@ -8,8 +8,9 @@
 
 class camera {
   public:
-    double aspect_ratio = 1.0;
-    int image_width = 100;
+    double aspect_ratio = 1.0; // Ratio of image width over height
+    int image_width = 100; // Rendered image width in pixel count
+    int samples_per_pixel = 10; // Count of random samples for each pixel
 
     void render(const hittable& world) {
         initialize();
@@ -35,7 +36,11 @@ class camera {
                 ray r = ray(camera_center, ray_direction);
 
                 color pixel_color = ray_color(r, world);
-                write_color(&out, pixel_color); // pass output stream as reference to color function
+                for(int sample = 0; sample < samples_per_pixel; sample ++) {
+                    ray r = get_ray(i, j);
+                    pixel_color += ray_color(r, world);
+                }
+                write_color(&out, pixel_color, samples_per_pixel); // pass output stream as reference to color function
             }
         }
         std::clog << "\nDone.\n";
@@ -70,6 +75,24 @@ class camera {
         // calculate position from first pixel (upper left) and from viewport top left corner
         auto viewport_upper_left = camera_center - vec3(0, 0, focal_length) - (viewport_u + viewport_v)/2;
         pixel00_loc = viewport_upper_left + (pixel_delta_u + pixel_delta_v)/2;
+    }
+
+    ray get_ray(int i, int j) const {
+        // Get a randomly sampled camera ray for the pixel at location i,j
+        auto pixel_center = pixel00_loc + (i * pixel_delta_u) + (j * pixel_delta_v);
+        auto pixel_sample = pixel_center + pixel_sample_square();
+
+        auto ray_origin = camera_center;
+        auto ray_direction = pixel_sample - ray_origin;
+
+        return ray(ray_origin, ray_direction);
+    }
+
+    vec3 pixel_sample_square() const {
+        // returns a random point in the surrounding square
+        auto px = -0.5 + random_double();
+        auto py = -0.5 + random_double();
+        return (px * pixel_delta_u) + (py * pixel_delta_v);
     }
 
     color ray_color(const ray& r, const hittable& world) const {
