@@ -1,32 +1,15 @@
+#include "rtweekend.hh"
+
 #include "color.hh"
-#include "ray.hh"
-#include "vec3.hh"
-
-// checks for hits of ray with sphere
-double hit_sphere(const point3& center, double radius, const ray& r) {
-    vec3 oc = r.origin() - center; // vector from center of sphere to ray origin
-
-    // t^2*v⋅v  +  2tv⋅(A−C)  +  (A−C)⋅(A−C)−r2 = 0
-    // a = v⋅v   b = 2v⋅(A-C)    c = (A-C)⋅(A-C)-r2
-    // 2 is factored out of b to simplify calculation:
-
-    auto a = r.direction().length_squared(); // dot product of ray direction with itself
-    auto half_b = dot(oc, r.direction()); // dot product of vector from center to ray origin with ray direction
-    auto c = oc.length_squared() - radius * radius; // same as dot product only faster
-    auto discriminant = half_b*half_b - a*c; // discriminant of quadratic equation (upper part of abc formula)
-
-    if(discriminant < 0) // if discriminant is negative, ray does not hit sphere (euqation has no real solutions)
-        return -1.0;
-    else
-        return (-half_b - sqrt(discriminant)) / a; // return distance to hit point
-}
+#include "hittable.hh"
+#include "hittable_list.hh"
+#include "sphere.hh"
 
 // returns color for a given ray
-color ray_color(const ray& r) {
-    auto t = hit_sphere(point3(0, 0, -1), 0.5, r); // check if ray hits sphere
-    if(t > 0.0) {// if ray hits sphere, return red
-        vec3 N = unit_vector(r.at(t) - vec3(0, 0, -1)); // calculate normal vector at hit point
-        return 0.5 * color(N.x() + 1, N.y() + 1, N.z() + 1); // scale normal vector to [0, 1] and return as color
+color ray_color(const ray& r, const hittable& world) {
+    hit_record rec;
+    if(world.hit(r, 0, infinity, rec)) { // check if ray hits any objects
+        return 0.5 * (rec.normal + color(1,1,1)); // shades ray based on normal vector of surface hit
     }
 
     vec3 unit_direction = unit_vector(r.direction()); // normalize ray direction
@@ -35,13 +18,20 @@ color ray_color(const ray& r) {
 }
 
 int main() {
-    // image dimensions
+    // Image dimensions
     auto aspect_ratio = 16.0 / 9.0;
     int image_width = 800;
     int image_height = static_cast<int>(image_width / aspect_ratio);
     image_height = image_height >= 1 ? image_height : 1;
 
-    // camera/viewport settings
+    // World
+    hittable_list world;
+
+    world.add(make_shared<sphere>(point3(0,0,-1), 0.5));
+    world.add(make_shared<sphere>(point3(0,-100.5,-1), 100));
+    
+
+    // Camera/viewport settings
     auto focal_length = 1.0;
     auto camera_center = point3(0, 0, 0);
     auto viewport_height = 2.0;
@@ -79,7 +69,7 @@ int main() {
             auto ray_direction = pixel_center - camera_center; // vector from camera center to current pixel is direction for the ray
             ray r = ray(camera_center, ray_direction);
 
-            color pixel_color = ray_color(r);
+            color pixel_color = ray_color(r, world);
             write_color(&out, pixel_color); // pass output stream as reference to color function
         }
     }
