@@ -6,6 +6,7 @@
 #include "color.hh"
 #include "hittable.hh"
 #include "material.hh"
+#include "parallel.hh"
 
 class camera {
   public:
@@ -23,42 +24,31 @@ class camera {
     double focus_dist = 10; // Distance from Camera "Sensor" to plane of perfect focus (focal point)
 
     void render(const hittable& world) {
+        std::clog << "Starting render ...\n";
         initialize();
+        std::clog << "Using " << processor_count << " threads.\n"; 
 
-        // open output file stream
-        std::ofstream out("image.ppm");
+        image_memory image(image_width, image_height);
 
-        // write ppm header
-        out.write("P3\n", 3);
-        out.write(std::to_string(image_width).c_str(), std::to_string(image_width).length());
-        out.write(" ", 1);
-        out.write(std::to_string(image_height).c_str(), std::to_string(image_height).length());
-        out.write("\n", 1);
-        out.write("255\n", 4);
-
-        for (int j = 0; j < image_height; ++j) {
-            std::clog << "\rScanlines remaining: " << image_height - j << std::flush;
-            for (int i = 0; i < image_width; ++i) {
-
-                // calculate trajectory of ray for current pixel and create ray
-                auto pixel_center = pixel00_loc + (i * pixel_delta_u) + (j * pixel_delta_v); // current pixel = first pixel + i times x pixel distance + j times y pixel distance
-                auto ray_direction = pixel_center - camera_center; // vector from camera center to current pixel is direction for the ray
-                ray r = ray(camera_center, ray_direction);
-
-                color pixel_color = color(0, 0, 0);
-                for(int sample = 0; sample < samples_per_pixel; sample ++) {
-                    ray r = get_ray(i, j);
-                    pixel_color += ray_color(r, max_depth, world);
-                }
-                write_color(&out, pixel_color, samples_per_pixel); // pass output stream as reference to color function
-            }
+        std::thread threads[processor_count];
+        for(int i = 0; i < processor_count; i++) {
+            threads[i] = std::thread(&camera::render_thread, this, std::ref(world), std::ref(image));
         }
-        std::clog << "\nDone.\n";
-        out.close();
+        for(int i = 0; i < processor_count; i++) {
+            threads[i].join();
+        }
+
+        std::clog << "\nRender Done.\n";
+        std::clog << "Writing...\n";
+
+        write_color(image.get_image(), image_width, image_height, samples_per_pixel);
+        
+        std::clog << "Done.\n";
     }
 
   private:
     int image_height;   // Rendered image height
+    int processor_count; 
     point3 camera_center;         // Camera center
     point3 pixel00_loc;    // Location of pixel 0, 0
     vec3 pixel_delta_u;  // Offset to pixel to the right
@@ -71,6 +61,9 @@ class camera {
     void initialize() {
         image_height = static_cast<int>(image_width / aspect_ratio);
         image_height = image_height >= 1 ? image_height : 1;
+
+        // Read number of available processors
+        processor_count = std::thread::hardware_concurrency();
 
         // Camera/viewport settings
         camera_center = lookfrom;
@@ -101,6 +94,22 @@ class camera {
         auto defocus_radius = focus_dist * tan(degrees_to_radians(defocus_angle / 2));
         defocus_disk_u = defocus_radius * u;
         defocus_disk_v = defocus_radius * v;
+    }
+    
+    // Renders the image as long as there are lines left to render
+    void render_thread(const hittable& world, image_memory& image) {
+        int j;
+        while((j = image.get_render_line()) <= image_height) {
+
+            for (int i = 0; i < image_width; ++i) {
+                color pixel_color = color(0, 0, 0);
+                for(int sample = 0; sample < samples_per_pixel; sample++) {
+                    ray r = get_ray(i, j); // get a slightly randomized ray for the current pixel
+                    pixel_color += ray_color(r, max_depth, world); // calculate color for the current pixel
+                }
+                image.write_pixel(j, i, pixel_color); // write the color to the image
+            }
+        }
     }
 
     ray get_ray(int i, int j) const {
