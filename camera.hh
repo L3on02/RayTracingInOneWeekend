@@ -38,9 +38,9 @@ class camera {
         // create shared memory object with task queue
         image_memory image(image_width, image_height);
 
+        // open threads and start rendering
+        std::thread threads[processor_count];
         for(int i = 0; i < max_iterations; i++) {
-            // open threads and start rendering
-            std::thread threads[processor_count];
             for(int i = 0; i < processor_count; i++) {
                 threads[i] = std::thread(&camera::render_thread, this, std::ref(world), std::ref(image));
             }
