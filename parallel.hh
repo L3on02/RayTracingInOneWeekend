@@ -24,7 +24,7 @@ class image_memory {
 
         int get_render_line() {
             std::lock_guard<std::mutex> guard(lock_line);
-            std::clog << "\rScanlines remaining: " << linesLeft << std::flush;
+            std::clog << "\rScanlines remaining: " << fmax(linesLeft, 0) << std::flush;
             return (lines - (--linesLeft));
         }
 

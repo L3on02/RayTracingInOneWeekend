@@ -8,6 +8,9 @@
 #include "material.hh"
 #include "parallel.hh"
 
+#include <chrono>
+#include <iomanip>
+
 class camera {
   public:
     double aspect_ratio = 1.0; // Ratio of image width over height
@@ -25,15 +28,21 @@ class camera {
 
     void render(const hittable& world) {
         std::clog << "Starting render ...\n";
-        initialize();
-        std::clog << "Using " << processor_count << " threads.\n"; 
+        // start timer
+        auto start = std::chrono::high_resolution_clock::now();
 
+        // initialize camera and viewport settings
+        initialize();
+
+        // create shared memory object with task queue
         image_memory image(image_width, image_height);
 
+        // open threads and start rendering
         std::thread threads[processor_count];
         for(int i = 0; i < processor_count; i++) {
             threads[i] = std::thread(&camera::render_thread, this, std::ref(world), std::ref(image));
         }
+        // wait for all threads to finish
         for(int i = 0; i < processor_count; i++) {
             threads[i].join();
         }
@@ -41,9 +50,14 @@ class camera {
         std::clog << "\nRender Done.\n";
         std::clog << "Writing...\n";
 
+        // store image to file
         write_color(image.get_image(), image_width, image_height, samples_per_pixel);
-        
-        std::clog << "Done.\n";
+
+        // stop timer
+        auto stop = std::chrono::high_resolution_clock::now();
+        std::chrono::duration<double> elapsed = stop - start;
+
+        std::clog << "Done in " << std::fixed << std::setprecision(2) << elapsed.count() << " seconds.\n";
     }
 
   private:
@@ -64,6 +78,7 @@ class camera {
 
         // Read number of available processors
         processor_count = std::thread::hardware_concurrency();
+        std::clog << "Using " << processor_count << " threads.\n";
 
         // Camera/viewport settings
         camera_center = lookfrom;
