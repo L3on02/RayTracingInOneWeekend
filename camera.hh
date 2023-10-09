@@ -16,7 +16,7 @@ class camera {
     double aspect_ratio = 1.0; // Ratio of image width over height
     int image_width = 100; // Rendered image width in pixel count
     int max_iterations = 10; // Count of rendering iterations done
-    int samples_per_pixel = 1; // Count of random samples for each pixel
+    int samples_per_pixel = 10; // Count of random samples for each pixel
     int max_depth = 10; // Maximum bounces that are calculated for each ray
 
     double vfov = 90; // vertical view angle (field of view)

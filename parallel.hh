@@ -30,15 +30,10 @@ class image_memory {
         }
 
         void copy_image() {
+            double factor = 1.0 / (iterations + 1);
             std::lock_guard<std::mutex> guard(lock_img);
-            if(iterations == 0)
-                for(int i = 0; i < lines * rows; i++) {
-                    image[i] = shared_storage[i];
-                }
-            else
-                for(int i = 0; i < lines * rows; i++) {
-                    image[i] = (image[i] + shared_storage[i]) / 2;
-                }
+            for(int i = 0; i < lines * rows; i++)
+                image[i] = (image[i] * (1 - factor) + shared_storage[i] * factor);
         }
 
         color* get_image() {

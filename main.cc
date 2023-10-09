@@ -57,6 +57,7 @@ int main() {
     cam.aspect_ratio = 16.0 / 9.0;
     cam.image_width = 800;
     cam.max_iterations = 50;
+    cam.samples_per_pixel = 1;
     cam.max_depth = 50;
 
     cam.vfov = 20;
