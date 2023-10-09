@@ -15,7 +15,8 @@ class camera {
   public:
     double aspect_ratio = 1.0; // Ratio of image width over height
     int image_width = 100; // Rendered image width in pixel count
-    int samples_per_pixel = 10; // Count of random samples for each pixel
+    int max_iterations = 10; // Count of rendering iterations done
+    int samples_per_pixel = 1; // Count of random samples for each pixel
     int max_depth = 10; // Maximum bounces that are calculated for each ray
 
     double vfov = 90; // vertical view angle (field of view)
@@ -37,27 +38,27 @@ class camera {
         // create shared memory object with task queue
         image_memory image(image_width, image_height);
 
-        // open threads and start rendering
-        std::thread threads[processor_count];
-        for(int i = 0; i < processor_count; i++) {
-            threads[i] = std::thread(&camera::render_thread, this, std::ref(world), std::ref(image));
-        }
-        // wait for all threads to finish
-        for(int i = 0; i < processor_count; i++) {
-            threads[i].join();
-        }
+        for(int i = 0; i < max_iterations; i++) {
+            // open threads and start rendering
+            std::thread threads[processor_count];
+            for(int i = 0; i < processor_count; i++) {
+                threads[i] = std::thread(&camera::render_thread, this, std::ref(world), std::ref(image));
+            }
+            // wait for all threads to finish
+            for(int i = 0; i < processor_count; i++) {
+                threads[i].join();
+            }
+            std::clog << "\rIteration " << i + 1 << " of " << max_iterations << " done." << std::flush;
 
-        std::clog << "\nRender Done.\n";
-        std::clog << "Writing...\n";
-
-        // store image to file
-        write_color(image.get_image(), image_width, image_height, samples_per_pixel);
+            // store image to file
+            write_color(image.get_image(), image_width, image_height, samples_per_pixel);
+        }
 
         // stop timer
         auto stop = std::chrono::high_resolution_clock::now();
         std::chrono::duration<double> elapsed = stop - start;
 
-        std::clog << "Done in " << std::fixed << std::setprecision(2) << elapsed.count() << " seconds.\n";
+        std::clog << "\nDone in " << std::fixed << std::setprecision(2) << elapsed.count() << " seconds.\n";
     }
 
   private:

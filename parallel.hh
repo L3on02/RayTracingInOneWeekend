@@ -15,6 +15,8 @@ class image_memory {
         image_memory(int render_width, int render_height) : lines(render_height), rows(render_width) {
             linesLeft = lines;
             shared_storage = new color[lines * rows];
+            image = new color[lines * rows];
+            iterations = 0;
         }
 
         void write_pixel(int line, int row, color pixel_color) {
@@ -24,13 +26,26 @@ class image_memory {
 
         int get_render_line() {
             std::lock_guard<std::mutex> guard(lock_line);
-            std::clog << "\rScanlines remaining: " << fmax(linesLeft, 0) << std::flush;
             return (lines - (--linesLeft));
         }
 
-        color* get_image() {
+        void copy_image() {
             std::lock_guard<std::mutex> guard(lock_img);
-            return shared_storage;
+            if(iterations == 0)
+                for(int i = 0; i < lines * rows; i++) {
+                    image[i] = shared_storage[i];
+                }
+            else
+                for(int i = 0; i < lines * rows; i++) {
+                    image[i] = (image[i] + shared_storage[i]) / 2;
+                }
+        }
+
+        color* get_image() {
+            copy_image();
+            iterations++;
+            linesLeft = lines;
+            return image;
         }
 
     private:
@@ -38,8 +53,10 @@ class image_memory {
         int rows;
         std::mutex lock_img;
         color* shared_storage;
+        color* image;
 
         int linesLeft;
+        int iterations;
         std::mutex lock_line;
 };
 
