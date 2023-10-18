@@ -16,7 +16,7 @@ cudart.o: main.cu
 	$(NVCC) $(NVCCFLAGS) $(GENCODE_FLAGS) -o cudart.o -c main.cu
 
 out.ppm: cudart
-	rm -f image.ppm
+	rm -f out.ppm
 	./cudart > out.ppm
 
 profile_basic: cudart
