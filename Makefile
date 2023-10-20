@@ -9,7 +9,7 @@ OBJ = $(SRC:.cc=.o) # Generate object file names from source file names
 EXECUTABLE = main  # Name of the executable
 
 # Header files
-HEADERS = camera.hh color.hh hittable_list.hh hittable.hh interval.hh material.hh parallel.hh ray.hh rtweekend.hh sphere.hh vec3.hh     # List your header files here
+HEADERS = camera.hh color.hh hittable_list.hh hittable.hh interval.hh material.hh ray.hh rtweekend.hh sphere.hh vec3.hh quad.hh triangle.hh    # List your header files here
 
 # Targets and rules
 all: $(EXECUTABLE)

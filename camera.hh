@@ -47,7 +47,7 @@ class camera {
 
                 color pixel_color = color(0, 0, 0);
                 for(int sample = 0; sample < samples_per_pixel; sample ++) {
-                    ray r = get_ray(i, j);
+                    r = get_ray(i, j);
                     pixel_color += ray_color(r, max_depth, world);
                 }
                 write_color(&out, pixel_color, samples_per_pixel); // pass output stream as reference to color function
