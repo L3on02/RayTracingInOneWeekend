@@ -13,6 +13,5 @@
 !*.md
 !LICENSE
 !README.md
-!*.vscode/*
 !*.gitignore
 !*Makefile

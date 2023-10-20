@@ -14,6 +14,9 @@ HEADERS = camera.hh color.hh hittable_list.hh hittable.hh interval.hh material.h
 # Targets and rules
 all: $(EXECUTABLE)
 
+ppm: $(EXECUTABLE)
+	./main
+
 $(EXECUTABLE): $(SRC) $(HEADERS)
 	$(CC) $(CFLAGS) $(LDFLAGS) -o $@ $<
 
