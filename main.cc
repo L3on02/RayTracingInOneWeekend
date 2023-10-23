@@ -92,7 +92,7 @@ void quads() {
     cam.aspect_ratio      = 1.0;
     cam.image_width       = 400;
     cam.samples_per_pixel = 10;
-    cam.max_depth         = 50;
+    cam.max_depth         = 10;
 
     cam.vfov     = 80;
     cam.lookfrom = point3(0,0,9);

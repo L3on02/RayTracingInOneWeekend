@@ -43,11 +43,10 @@ class camera {
                 // calculate trajectory of ray for current pixel and create ray
                 auto pixel_center = pixel00_loc + (i * pixel_delta_u) + (j * pixel_delta_v); // current pixel = first pixel + i times x pixel distance + j times y pixel distance
                 auto ray_direction = pixel_center - camera_center; // vector from camera center to current pixel is direction for the ray
-                ray r = ray(camera_center, ray_direction);
 
                 color pixel_color = color(0, 0, 0);
                 for(int sample = 0; sample < samples_per_pixel; sample ++) {
-                    r = get_ray(i, j);
+                    ray r = get_ray(i, j);
                     pixel_color += ray_color(r, max_depth, world);
                 }
                 write_color(&out, pixel_color, samples_per_pixel); // pass output stream as reference to color function
