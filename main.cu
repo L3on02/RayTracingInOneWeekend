@@ -29,25 +29,29 @@ void check_cuda(cudaError_t result, char const *const func, const char *const fi
 __device__ vec3 color(const ray &r, hittable **world, curandState *local_rand_state)
 {
     ray cur_ray = r;
-    vec3 cur_attenuation = vec3(1.0,1.0,1.0);
+    vec3 cur_attenuation = vec3(1.0, 1.0, 1.0);
     for (int i = 0; i < 50; i++)
     {
         hit_record rec;
-        if ((*world)->hit(cur_ray, 0.001f, FLT_MAX, rec)) {
+        if ((*world)->hit(cur_ray, 0.001f, FLT_MAX, rec))
+        {
             ray scattered;
             vec3 attenuation;
-            if(rec.mat_ptr->scatter(cur_ray, rec, attenuation, scattered, local_rand_state)) {
+            if (rec.mat_ptr->scatter(cur_ray, rec, attenuation, scattered, local_rand_state))
+            {
                 cur_attenuation *= attenuation;
                 cur_ray = scattered;
             }
-            else {
-                return vec3(0.0,0.0,0.0);
+            else
+            {
+                return vec3(0.0, 0.0, 0.0);
             }
         }
-        else {
+        else
+        {
             vec3 unit_direction = unit_vector(cur_ray.direction());
-            float t = 0.5f*(unit_direction.y() + 1.0f);
-            vec3 c = (1.0f-t)*vec3(1.0, 1.0, 1.0) + t*vec3(0.5, 0.7, 1.0);
+            float t = 0.5f * (unit_direction.y() + 1.0f);
+            vec3 c = (1.0f - t) * vec3(1.0, 1.0, 1.0) + t * vec3(0.5, 0.7, 1.0);
             return cur_attenuation * c;
         }
     }
@@ -69,7 +73,7 @@ __global__ void render(vec3 *fb, int max_x, int max_y, int ns, camera **cam, hit
     {
         float u = float(i + curand_uniform(&local_rand_state)) / float(max_x);
         float v = float(j + curand_uniform(&local_rand_state)) / float(max_y);
-        ray r = (*cam)->get_ray(u, v);
+        ray r = (*cam)->get_ray(u, v, &local_rand_state);
         col += color(r, world, &local_rand_state);
     }
 
@@ -90,23 +94,36 @@ __global__ void create_world(hittable **d_list, hittable **d_world, camera **d_c
 {
     if (threadIdx.x == 0 && blockIdx.x == 0)
     {
-        d_list[0] = new sphere(vec3(0,0,-1), 0.5, new lambertian(vec3(0.1, 0.2, 0.5)));
-        d_list[1] = new sphere(vec3(0,-100.5,-1), 100, new lambertian(vec3(0.8, 0.8, 0.0)));
-        d_list[2] = new sphere(vec3(1,0,-1), 0.5, new metal(vec3(0.8, 0.6, 0.2), 1.0));
-        d_list[3] = new sphere(vec3(-1,0,-1), 0.5, new dielectric(1.5));
-        d_list[4] = new sphere(vec3(-1,0,-1), -0.45, new dielectric(1.5));
-        *d_world  = new hittable_list(d_list,5);
-        *d_camera   = new camera(vec3(-2,2,1),
-                                 vec3(0,0,-1),
-                                 vec3(0,1,0),
-                                 20.0,
-                                 float(nx)/float(ny));
+        d_list[0] = new sphere(vec3(0, 0, -1), 0.5,
+                               new lambertian(vec3(0.1, 0.2, 0.5)));
+        d_list[1] = new sphere(vec3(0, -100.5, -1), 100,
+                               new lambertian(vec3(0.8, 0.8, 0.0)));
+        d_list[2] = new sphere(vec3(1, 0, -1), 0.5,
+                               new metal(vec3(0.8, 0.6, 0.2), 0.0));
+        d_list[3] = new sphere(vec3(-1, 0, -1), 0.5,
+                               new dielectric(1.5));
+        d_list[4] = new sphere(vec3(-1, 0, -1), -0.45,
+                               new dielectric(1.5));
+        *d_world = new hittable_list(d_list, 5);
+        vec3 lookfrom(3, 3, 2);
+        vec3 lookat(0, 0, -1);
+        float vfov = 20.0;
+        float dist_to_focus = (lookfrom - lookat).length();
+        float aperture = 2.0;
+        *d_camera = new camera(lookfrom,
+                               lookat,
+                               vec3(0, 1, 0),
+                               vfov,
+                               float(nx) / float(ny),
+                               aperture,
+                               dist_to_focus);
     }
 }
 
 __global__ void free_world(hittable **d_list, hittable **d_world, camera **d_camera)
 {
-    for(int i=0; i < 5; i++) {
+    for (int i = 0; i < 5; i++)
+    {
         delete ((sphere *)d_list[i])->mat_ptr;
         delete d_list[i];
     }
@@ -118,7 +135,7 @@ int main()
 {
     int nx = 1200;
     int ny = 600;
-    int ns = 200; // Number of samples
+    int ns = 500; // Number of samples
     int tx = 8;
     int ty = 8;
 
