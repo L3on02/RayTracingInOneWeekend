@@ -23,19 +23,22 @@ void check_cuda(cudaError_t result, char const *const func, const char *const fi
     }
 }
 
-__device__ vec3 ray_color(const ray &r, hittable **world)
+__device__ vec3 color(const ray &r, hittable **world)
 {
     hit_record rec;
     if ((*world)->hit(r, 0.0, FLT_MAX, rec))
     {
         return 0.5f * vec3(rec.normal.x() + 1.0f, rec.normal.y() + 1.0f, rec.normal.z() + 1.0f);
     }
-    vec3 unit_direction = unit_vector(r.direction());
-    float t = 0.5f * (unit_direction.y() + 1.0f);
-    return (1.0f - t) * vec3(1.0, 1.0, 1.0) + t * vec3(0.5, 0.7, 1.0);
+    else
+    {
+        vec3 unit_direction = unit_vector(r.direction());
+        float t = 0.5f * (unit_direction.y() + 1.0f);
+        return (1.0f - t) * vec3(1.0, 1.0, 1.0) + t * vec3(0.5, 0.7, 1.0);
+    }
 }
 
-__global__ void render(vec3 *fb, int max_x, int max_y, int number_of_samples, camera **camera, hittable **world, curandState *rand_state)
+__global__ void render(vec3 *fb, int max_x, int max_y, int ns, camera **cam, hittable **world, curandState *rand_state)
 {
     int i = threadIdx.x + blockIdx.x * blockDim.x;
     int j = threadIdx.y + blockIdx.y * blockDim.y;
@@ -44,23 +47,23 @@ __global__ void render(vec3 *fb, int max_x, int max_y, int number_of_samples, ca
     int pixel_index = j * max_x + i;
 
     curandState local_rand_state = rand_state[pixel_index];
-    vec3 col(0,0,0);
-    
-    for(int i = 0; i < number_of_samples; i++) {
-        float u = float(i + curand_uniform(&local_rand_state) - 0.5f) / float(max_x);
-        float v = float(j + curand_uniform(&local_rand_state) - 0.5f) / float(max_y);
-        // ray r(origin, lower_left_corner + u * horizontal + v * vertical);
-        ray r = (*camera)->get_ray(u, v);
-        col += ray_color(r, world);
+    vec3 col(0, 0, 0);
+
+    for (int s = 0; s < ns; s++)
+    {
+        float u = float(i + curand_uniform(&local_rand_state)) / float(max_x);
+        float v = float(j + curand_uniform(&local_rand_state)) / float(max_y);
+        ray r = (*cam)->get_ray(u, v);
+        col += color(r, world);
     }
-    
-    fb[pixel_index] = col / float(number_of_samples);
+
+    fb[pixel_index] = col / float(ns);
 }
 
 __global__ void render_init(int max_x, int max_y, curandState *rand_state)
 {
     int i = threadIdx.x + blockIdx.x * blockDim.x;
-    int j = threadIdx.y * blockIdx.y * blockDim.y;
+    int j = threadIdx.y + blockIdx.y * blockDim.y;
     if ((i >= max_x) || (j >= max_y))
         return;
     int pixel_index = j * max_x + i;
@@ -90,11 +93,12 @@ int main()
 {
     int nx = 1200;
     int ny = 600;
+    int ns = 100; // Number of samples
     int tx = 8;
     int ty = 8;
-    int number_of_samples = 5;    //Number of samples
 
-    std::cerr << "Rendering a " << nx << "x" << ny << " image ";
+
+    std::cerr << "Rendering a " << nx << "x" << ny << " image with " << ns << " samples per pixel ";
     std::cerr << "in " << tx << "x" << ty << " blocks.\n";
 
     int num_pixels = nx * ny;
@@ -103,6 +107,10 @@ int main()
     // allocate FB
     vec3 *fb;
     checkCudaErrors(cudaMallocManaged((void **)&fb, fb_size));
+
+    // allocate random state
+    curandState *d_rand_state;
+    checkCudaErrors(cudaMalloc((void **)&d_rand_state, num_pixels * sizeof(curandState)));
 
     // make our world of hitables
     hittable **d_list;
@@ -122,13 +130,14 @@ int main()
     dim3 blocks(nx / tx + 1, ny / ty + 1);
     dim3 threads(tx, ty);
 
-    curandState *d_rand_state;
-    checkCudaErrors(cudaMalloc((void **)&d_rand_state, num_pixels * sizeof(curandState)));
     render_init<<<blocks, threads>>>(nx, ny, d_rand_state);
-
-    render<<<blocks, threads>>>(fb, nx, ny, number_of_samples, d_camera, d_world, d_rand_state);
     checkCudaErrors(cudaGetLastError());
     checkCudaErrors(cudaDeviceSynchronize());
+
+    render<<<blocks, threads>>>(fb, nx, ny, ns, d_camera, d_world, d_rand_state);
+    checkCudaErrors(cudaGetLastError());
+    checkCudaErrors(cudaDeviceSynchronize());
+
     stop = clock();
     double timer_seconds = ((double)(stop - start)) / CLOCKS_PER_SEC;
     std::cerr << "took " << timer_seconds << " seconds.\n";
