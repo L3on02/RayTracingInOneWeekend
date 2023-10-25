@@ -1,18 +1,18 @@
-#ifndef HITABLELISTH
-#define HITABLELISTH
+#ifndef HITTABLELIST_CUH
+#define HITTABLELIST_CUH
 
-#include "hitable.cuh"
+#include "hittable.cuh"
 
-class hitable_list: public hitable  {
+class hittable_list: public hittable  {
     public:
-        __device__ hitable_list() {}
-        __device__ hitable_list(hitable **l, int n) {list = l; list_size = n; }
+        __device__ hittable_list() {}
+        __device__ hittable_list(hittable **l, int n) {list = l; list_size = n; }
         __device__ virtual bool hit(const ray& r, float tmin, float tmax, hit_record& rec) const;
-        hitable **list;
+        hittable **list;
         int list_size;
 };
 
-__device__ bool hitable_list::hit(const ray& r, float t_min, float t_max, hit_record& rec) const {
+__device__ bool hittable_list::hit(const ray& r, float t_min, float t_max, hit_record& rec) const {
         hit_record temp_rec;
         bool hit_anything = false;
         float closest_so_far = t_max;

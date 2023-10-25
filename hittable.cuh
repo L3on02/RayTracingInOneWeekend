@@ -1,5 +1,5 @@
-#ifndef HITABLE_CUH
-#define HITABLE_CUH
+#ifndef HITTABLE_CUH
+#define HITTABLE_CUH
 
 #include "ray.cuh"
 
@@ -10,7 +10,7 @@ struct hit_record
     vec3 normal;
 };
 
-class hitable  {
+class hittable  {
     public:
         __device__ virtual bool hit(const ray& r, float t_min, float t_max, hit_record& rec) const = 0;
 };

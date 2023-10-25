@@ -1,9 +1,9 @@
 #ifndef SPHERE_CUH
 #define SPHERE_CUH
 
-#include "hitable.cuh"
+#include "hittable.cuh"
 
-class sphere: public hitable  {
+class sphere: public hittable  {
     public:
         __device__ sphere() {}
         __device__ sphere(vec3 cen, float r) : center(cen), radius(r)  {};
