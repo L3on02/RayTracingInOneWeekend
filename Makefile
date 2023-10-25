@@ -17,7 +17,7 @@ cudart.o: main.cu
 
 out.ppm: cudart
 	rm -f out.ppm
-	./cudart > out.ppm
+	./cudart 
 
 profile_basic: cudart
 	nvprof ./cudart > out.ppm

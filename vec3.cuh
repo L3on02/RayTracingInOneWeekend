@@ -5,8 +5,9 @@
 #include <stdlib.h>
 #include <iostream>
 
-class vec3  {
+__host__ __device__ float absolute(float arg) {return arg > 0 ? arg : -arg;}
 
+class vec3  {
 
 public:
     __host__ __device__ vec3() {}
@@ -33,7 +34,9 @@ public:
     __host__ __device__ inline float length() const { return sqrt(e[0]*e[0] + e[1]*e[1] + e[2]*e[2]); }
     __host__ __device__ inline float squared_length() const { return e[0]*e[0] + e[1]*e[1] + e[2]*e[2]; }
     __host__ __device__ inline void make_unit_vector();
-
+    __host__ __device__ bool near_zero() const {
+        auto s = 1e-8;
+        return (absolute(e[0]) < s) && absolute(e[1] < s) && absolute(e[2] < s); }
 
     float e[3];
 };
@@ -51,7 +54,7 @@ inline std::ostream& operator<<(std::ostream &os, const vec3 &t) {
 }
 
 __host__ __device__ inline void vec3::make_unit_vector() {
-    float k = 1.0 / sqrt(e[0]*e[0] + e[1]*e[1] + e[2]*e[2]);
+    float k = 1.0f / sqrt(e[0]*e[0] + e[1]*e[1] + e[2]*e[2]);
     e[0] *= k; e[1] *= k; e[2] *= k;
 }
 
@@ -130,7 +133,7 @@ __host__ __device__ inline vec3& vec3::operator*=(const float t) {
 }
 
 __host__ __device__ inline vec3& vec3::operator/=(const float t) {
-    float k = 1.0/t;
+    float k = 1.0f/t;
 
     e[0]  *= k;
     e[1]  *= k;
