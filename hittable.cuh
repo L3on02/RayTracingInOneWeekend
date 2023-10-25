@@ -8,6 +8,9 @@ struct hit_record
     float t;
     vec3 p;
     vec3 normal;
+    vec3 color;
+    float luminance;
+    float reflect;
 };
 
 class hittable  {
