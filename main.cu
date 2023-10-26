@@ -98,6 +98,7 @@ __global__ void render(vec3 *fb, int max_x, int max_y, int ns, camera **cam, hit
 
     rand_state[pixel_index] = local_rand_state;
     col /= float(ns);
+    //linear to gamma conversion
     col[0] = sqrt(col[0]);
     col[1] = sqrt(col[1]);
     col[2] = sqrt(col[2]);
@@ -170,9 +171,10 @@ __global__ void free_world(hittable **d_list, hittable **d_world, camera **d_cam
 
 int main()
 {
-    int nx = 1200;
-    int ny = 800;
-    int ns = 100; // Number of samples
+    int nx = 1920;
+    float aspect_ratio = 16.0/9.0;
+    int ny = nx / aspect_ratio;
+    int ns = 10; // Number of samples
     int tx = 8;
     int ty = 8;
 
