@@ -43,8 +43,6 @@ __device__ float crossProduct(vec3 a, vec3 b)
 __device__ vec3 color(const ray &r, hittable **world, curandState *local_random_state)
 {
     ray cur_ray = r;
-    float cur_attenuation = 1.0f;
-    vec3 curcol = vec3(0.0, 0.0, 0.0);
     const int bounces = 7;
     hit_record path[bounces];
     int hits = 0;
@@ -53,10 +51,8 @@ __device__ vec3 color(const ray &r, hittable **world, curandState *local_random_
         hit_record rec;
         if ((*world)->hit(cur_ray, 0.001f, FLT_MAX, rec))
         {
-            vec3 target = rec.p + rec.normal + (random_in_unit_sphere(local_random_state) * ( 1 - rec.reflect));
-            curcol = rec.color * cur_attenuation;
+            vec3 target = rec.p + rec.normal + (random_in_unit_sphere(local_random_state) * rec.scatter);
             path[i] = rec;
-            cur_attenuation *= 0.5;
             cur_ray = ray(rec.p, target - rec.p);
             hits++;
         }
@@ -65,8 +61,8 @@ __device__ vec3 color(const ray &r, hittable **world, curandState *local_random_
              vec3 unit_direction = unit_vector(cur_ray.direction());
              float t = 0.5f * (unit_direction.y() + 1.0f);
             //  vec3 c = (1.0f - t) * vec3(0.1, 0.0, 0.3) + t * vec3(0.5, 0.7, 1.0);
-             vec3 c = (1.0f - t) * vec3(0.5, 0.2, 0.1) + t * vec3(0.2, 0.2, 0.2);
-            // return curcol + cur_attenuation * c;
+              vec3 c = (1.0f - t) * vec3(0.5, 0.2, 0.1) + t * vec3(0.2, 0.2, 0.2);
+            //vec3 c = vec3(0.0, 0.0, 0.0);
             hit_record hr = hit_record();
             hr.color = c;
             hr.luminance = 1;
@@ -77,7 +73,7 @@ __device__ vec3 color(const ray &r, hittable **world, curandState *local_random_
     }
 
     vec3 color = vec3(0.0, 0.0, 0.0);
-    for (int i = hits - 1; i >= 0; i--)
+    for (int i = hits ; i >= 0; i--)
     {
             color = (vec3(color.x() * path[i].color.x(), color.y() * path[i].color.y(), color.z() * path[i].color.z()) * path[i].reflect) + path[i].color * path[i].luminance;// * path[i].reflect;        
     }
@@ -121,14 +117,14 @@ __global__ void create_world(hittable **d_list, hittable **d_world, camera **d_c
 {
     if (threadIdx.x == 0 && blockIdx.x == 0)
     {
-        *(d_list) = new sphere(vec3(0, 0, -1.5), 0.5, vec3(1.0, 0, 0), 0.5, 0.8);               //red
-        *(d_list + 1) = new sphere(vec3(0.4, 0.0, -1.0), 0.2, vec3(1.0, 1.0, 1.0), 0.0, 1.0);   //mirror
-        *(d_list + 2) = new sphere(vec3(0.5, 0.0, -0.5), 0.1, vec3(0.2, 1.0, 0.3), 0.0, 1.0);   //Green mirror
-        *(d_list + 3) = new sphere(vec3(-0.2, -0.1, -0.9), 0.2, vec3(0.0, 0.2, 0.5), 0.0, 0.5); //blue
-        *(d_list + 4) = new sphere(vec3(-0.0, -0.1, -0.6), 0.1, vec3(1.0, 1.0, 1.0), 5.0, 0.0); //white / light source
-        *(d_list + 5) = new sphere(vec3(0, -100.5, -1), 100, vec3(0.5, 0.5, 0.5), 0.0, 0.5);    //big / floor
-        *(d_list + 6) = new sphere(vec3(0.4, 7, -1), 5, vec3(1.0, 1.0, 1.0), 2.0, 1.0);    //light source 2
-        *d_world = new hittable_list(d_list, 7);
+        *(d_list) = new sphere(vec3(0, 0, -1.5), 0.5, vec3(1.0, 0, 0), 0.0, 1.0, 1.0);               //red
+        *(d_list + 1) = new sphere(vec3(0.4, 0.0, -1.0), 0.2, vec3(1.0, 1.0, 1.0), 0.0, 1.0, 0.0);   //mirror
+        *(d_list + 2) = new sphere(vec3(0.5, 0.0, -0.5), 0.1, vec3(0.2, 1.0, 0.3), 0.0, 0.1, 0.0);   //Green mirror
+        *(d_list + 3) = new sphere(vec3(-0.2, -0.1, -0.9), 0.2, vec3(0.0, 0.2, 0.5), 0.0, 0.5, 0.5); //blue
+        *(d_list + 4) = new sphere(vec3(-0.0, -0.1, -0.6), 0.1, vec3(1.0, 1.0, 1.0), 5.0, 0.0, 0.5); //white / light source
+        *(d_list + 5) = new sphere(vec3(0, -100.5, -1), 100, vec3(0.5, 0.5, 0.5), 0.0, 0.5, 1.0);    //big / floor
+        //*(d_list + 6) = new sphere(vec3(0.4, 7, -1), 5, vec3(1.0, 1.0, 1.0), 2.0, 1.0);    //light source 2
+        *d_world = new hittable_list(d_list, 6);
         *d_camera = new camera();
     }
 }
@@ -145,7 +141,7 @@ int main()
 {
     int nx = 1200;
     int ny = 600;
-    int ns = 1000; // Number of samples
+    int ns = 100; // Number of samples
     int tx = 8;
     int ty = 8;
 

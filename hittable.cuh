@@ -11,6 +11,7 @@ struct hit_record
     vec3 color;
     float luminance;
     float reflect;
+    float scatter;
 };
 
 class hittable  {
