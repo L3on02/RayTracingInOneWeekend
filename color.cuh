@@ -8,7 +8,7 @@
 
 inline float linear_to_gamma(float linear_component)
 {
-    return sqrt(linear_component);
+    return linear_component;//sqrt(linear_component);
 }
 
 float clamp(double x)
