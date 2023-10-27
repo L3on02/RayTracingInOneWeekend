@@ -1,5 +1,5 @@
-#ifndef CAMERA_H
-#define CAMERA_H
+#ifndef CAMERA_HH
+#define CAMERA_HH
 
 #include "rtweekend.hh"
 
