@@ -1,5 +1,5 @@
-#ifndef MULTITHREAD_HH
-#define MULTITHREAD_HH
+#ifndef PARELLEL_HH
+#define PARELLEL_HH
 
 #include "vec3.hh"
 

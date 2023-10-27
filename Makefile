@@ -13,6 +13,7 @@ HEADERS = camera.hh color.hh hittable_list.hh hittable.hh interval.hh material.h
 
 # Targets and rules
 all: $(EXECUTABLE)
+	./$(EXECUTABLE)
 
 $(EXECUTABLE): $(SRC) $(HEADERS)
 	$(CC) $(CFLAGS) $(LDFLAGS) -o $@ $<

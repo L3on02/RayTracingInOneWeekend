@@ -6,8 +6,6 @@
 #include "sphere.hh"
 #include "material.hh"
 
-// compie with following flags: g++ main.cc -o main -Ofast -ffast-math -flto
-
 int main() {
     // World
     hittable_list world;
@@ -55,8 +53,8 @@ int main() {
     camera cam;
 
     cam.aspect_ratio = 16.0 / 9.0;
-    cam.image_width = 800;
-    cam.max_iterations = 50;
+    cam.image_width = 1920;
+    cam.max_iterations = 10;
     cam.samples_per_pixel = 1;
     cam.max_depth = 50;
 
