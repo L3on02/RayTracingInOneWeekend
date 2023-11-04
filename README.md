@@ -1,6 +1,7 @@
 # Raytracing in One Weekend with Multi-threading and GPU Support
 
-This repository is a modified version of the "Raytracing in One Weekend" tutorial, featuring additional enhancements, multi-threading, and GPU support with CUDA. 
+This repository is a modified version of the "Raytracing in One Weekend" tutorial, featuring additional enhancements, multi-threading, and GPU support with CUDA.
+![rendered image](RayTracingImage.png)
 
 ## Branches
 - `master`: Plain Raytracing in One Weekend project with output directly to a .ppm file.
