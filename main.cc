@@ -6,7 +6,7 @@
 #include "sphere.hh"
 #include "material.hh"
 
-int main() {
+void randomSpheres(camera cam) {
     // World
     hittable_list world;
 
@@ -50,21 +50,54 @@ int main() {
     auto material3 = make_shared<metal>(color(0.7, 0.6, 0.5), 0.0);
     world.add(make_shared<sphere>(point3(4, 1, 0), 1.0, material3));
 
-    camera cam;
+    cam.render(world);
+}
 
-    cam.aspect_ratio      = 16.0 / 9.0;
-    cam.image_width       = 1920;
+void cornellBox(camera &cam) {
+    hittable_list world;
+
+    auto red   = make_shared<lambertian>(color(0.65, 0.05, 0.05));
+    auto white = make_shared<lambertian>(color(0.73, 0.73, 0.73));
+    auto green = make_shared<lambertian>(color(0.12, 0.45, 0.15));
+    //auto light = make_shared<diffuse_light>(color(15, 15, 15));
+
+    world.add(make_shared<sphere>(point3(0,-10000,0), 9990, white));
+    world.add(make_shared<sphere>(point3(0, 10000,0), 9990, white));
+    world.add(make_shared<sphere>(point3(0, 0,-10000), 9990, red));
+    world.add(make_shared<sphere>(point3(0, 0, 10000), 9990, green));
+   /* world.add(make_shared<sphere>(point3(1000,0,0), 995, red));
+    world.add(make_shared<sphere>(point3(-1000,0,0),995, green));
+    world.add(make_shared<sphere>(point3(0,1000,0), 995, white));
+    world.add(make_shared<sphere>(point3(0,-1000,0),995, white)); */
+    //world.add(make_shared<sphere>(point3(0,0,0),     50,  light));
+
+    cam.render(world);
+}
+
+void camInit(camera &cam) {
+    cam.aspect_ratio      = 1.0 / 1.0;
+    cam.image_width       = 400;
     cam.samples_per_pixel = 10;
-    cam.max_depth         = 50;
+    cam.max_depth         = 10;
 
-    cam.vfov     = 20;
-    cam.lookfrom = point3(13,2,3);
+    cam.vfov     = 90;
+    cam.lookfrom = point3(-1,0,0);
     cam.lookat   = point3(0,0,0);
     cam.vup      = vec3(0,1,0);
 
-    cam.defocus_angle = 0.6;
+    cam.defocus_angle = 0.0;
     cam.focus_dist    = 10.0;
+}
 
-    cam.render(world);
+int main() {
+    camera cam;
+    camInit(cam);
+    switch(2) {
+        case 1:
+            randomSpheres(cam);
+            break;
+        case 2:
+            cornellBox(cam);
+    }
     return 0;
 }

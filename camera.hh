@@ -1,5 +1,5 @@
-#ifndef CAMERA_H
-#define CAMERA_H
+#ifndef CAMERA_HH
+#define CAMERA_HH
 
 #include <chrono>
 #include <iomanip>
@@ -107,6 +107,7 @@ private:
 
         // calculate position from first pixel (upper left) and from viewport top left corner
         auto viewport_upper_left = camera_center - (focus_dist * w) - (viewport_u + viewport_v) / 2;
+        printf("Viewport upper left: (%f, %f, %f)\n", viewport_upper_left[0], viewport_upper_left[1], viewport_upper_left[2]);
         pixel00_loc = viewport_upper_left + (pixel_delta_u + pixel_delta_v) / 2;
 
         // calculate defocus disk  basis vectors
