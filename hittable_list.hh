@@ -9,6 +9,10 @@
 using std::make_shared;
 using std::shared_ptr; // makes sure an object that is referenced multiple times gets safely deleted
 
+/**
+ * @brief The hittable_list class represents a list of hittable objects.
+ * It is used to store all objects in a scene. The hit function of the hittable_list class determines wheter a ray hits any of the objects in the list.
+ */
 class hittable_list : public hittable
 {
 public:

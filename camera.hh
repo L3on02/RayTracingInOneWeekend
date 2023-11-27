@@ -10,6 +10,14 @@
 #include "hittable.hh"
 #include "material.hh"
 
+/**
+ * @brief The camera class represents a virtual camera used for rendering a scene.
+ *
+ * The camera class is responsible for generating rays that are used to trace the scene and produce an image.
+ * It supports various settings such as aspect ratio, image width, samples per pixel, and maximum depth.
+ * The camera can be positioned and oriented using the lookfrom, lookat, and vup parameters.
+ * It also supports defocus effects by specifying defocus angle and focus distance.
+ */
 class camera
 {
 public:
