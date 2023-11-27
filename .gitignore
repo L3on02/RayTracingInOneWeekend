@@ -6,12 +6,7 @@
 !*.cpp
 !*.hh
 !*.hpp
-!*.py
-!*.js
-!*.html
-!*.css
 !*.md
-!LICENSE
 !README.md
 !*.gitignore
 !*Makefile

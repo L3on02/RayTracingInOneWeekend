@@ -14,6 +14,7 @@ HEADERS = camera.hh color.hh hittable_list.hh hittable.hh interval.hh material.h
 # Targets and rules
 all: $(EXECUTABLE)
 
+# Run the executable to create ppm image
 ppm: $(EXECUTABLE)
 	./main
 
