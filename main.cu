@@ -187,17 +187,18 @@ int main()
     // allocate FB
     vec3 *fb;
     checkCudaErrors(cudaMallocManaged((void **)&fb, fb_size));
-
+    std::cerr << "Checkpoint 1\n";
     // allocate random state
     curandState *d_rand_state;
     checkCudaErrors(cudaMalloc((void **)&d_rand_state, num_pixels * sizeof(curandState)));
     curandState *d_rand_state2;
     checkCudaErrors(cudaMalloc((void **)&d_rand_state2, 1 * sizeof(curandState)));
-
+    std::cerr << "Checkpoint 2\n";
     // we need that 2nd random state to be initialized for the world creation
     rand_init<<<1, 1>>>(d_rand_state2);
     checkCudaErrors(cudaGetLastError());
     checkCudaErrors(cudaDeviceSynchronize());
+    std::cerr << "Checkpoint 3\n";
 
     // make our world of hitables
     hittable **d_list;
@@ -208,7 +209,7 @@ int main()
     camera **d_camera;
     checkCudaErrors(cudaMalloc((void **)&d_camera, sizeof(camera *)));
     create_world<<<1, 1>>>(d_list, d_world, d_camera, nx, ny, d_rand_state2);
-
+    std::cerr << "Checkpoint 4\n";
     checkCudaErrors(cudaGetLastError());
     checkCudaErrors(cudaDeviceSynchronize());
 
@@ -221,11 +222,11 @@ int main()
     render_init<<<blocks, threads>>>(nx, ny, d_rand_state);
     checkCudaErrors(cudaGetLastError());
     checkCudaErrors(cudaDeviceSynchronize());
-
+std::cerr << "Checkpoint 5\n";
     render<<<blocks, threads>>>(fb, nx, ny, ns, d_camera, d_world, d_rand_state);
     checkCudaErrors(cudaGetLastError());
     checkCudaErrors(cudaDeviceSynchronize());
-
+std::cerr << "Checkpoint 6\n";
     stop = clock();
     double timer_seconds = ((double)(stop - start)) / CLOCKS_PER_SEC;
     std::cerr << "took " << timer_seconds << " seconds.\n";
