@@ -3,6 +3,15 @@
 #include <GL/glew.h> // has to be included first!
 #include <GLFW/glfw3.h>
 
+#include <imgui.h>
+#include <imgui_impl_glfw.h>
+#include <imgui_impl_opengl3.h>
+
+#define STB_IMAGE_IMPLEMENTATION
+#include <stb_image.h>
+
+#include <filesystem>
+
 #include "rtweekend.hh"
 
 #include "camera.hh"
@@ -44,6 +53,43 @@ void handleEvents(GLFWwindow* window) {
 void frameBufferSizeCallback(GLFWwindow* window, int width, int height) {
     glfwMakeContextCurrent(window);
     glViewport(0, 0, width, height);
+}
+
+ImGuiIO& setupImGUI(GLFWwindow* window) {
+    // Setup Dear ImGui context
+    IMGUI_CHECKVERSION();
+    ImGui::CreateContext();
+    ImGuiIO& io = ImGui::GetIO(); (void)io;
+    io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;     // Enable Keyboard Controls
+    io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;      // Enable Gamepad Controls
+    io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;         // Enable Docking
+    io.ConfigFlags |= ImGuiConfigFlags_ViewportsEnable;       // Enable Multi-Viewport / Platform Windows
+    //io.ConfigViewportsNoAutoMerge = true;
+    //io.ConfigViewportsNoTaskBarIcon = true;
+
+    // Setup Dear ImGui style
+    ImGui::StyleColorsDark();
+    //ImGui::StyleColorsLight();
+
+    // When viewports are enabled we tweak WindowRounding/WindowBg so platform windows can look identical to regular ones.
+    ImGuiStyle& style = ImGui::GetStyle();
+    if (io.ConfigFlags & ImGuiConfigFlags_ViewportsEnable)
+    {
+        style.WindowRounding = 0.0f;
+        style.Colors[ImGuiCol_WindowBg].w = 1.0f;
+    }
+
+    // Setup Platform/Renderer backends
+    const char* glsl_version = "#version 330";
+    ImGui_ImplGlfw_InitForOpenGL(window, true);
+    ImGui_ImplOpenGL3_Init(glsl_version);
+
+    return io;
+}
+
+void render() {
+    //clear color and depth buffer
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 }
 
 int main() {
@@ -93,9 +139,9 @@ int main() {
     camera cam;
 
     cam.aspect_ratio = 16.0 / 9.0;
-    cam.image_width = 1920;
+    cam.image_width = 720;
     cam.samples_per_pixel = 10;
-    cam.max_depth = 50;
+    cam.max_depth = 5;
 
     cam.vfov = 20;
     cam.lookfrom = point3(13,2,3);
@@ -105,32 +151,91 @@ int main() {
     cam.defocus_angle = 0.6;
     cam.focus_dist = 10.0;
 
+    int image_width = 720;
+    int image_height = static_cast<int>(image_width / (16.0 / 9.0));
+
     auto window = create_window(1920, 16.0/9.0);
-    if (!window)
-    {
+    if (!window) {
         printf("Creation of window failed!");
         glfwTerminate();
         return 1;
     }
 
     GLenum err = glewInit();
-    if (err != GLEW_OK)
-    {
+    if (err != GLEW_OK) {
         printf("Init of glew failed! %s\n", glewGetErrorString(err));
     }
 
     glfwMakeContextCurrent(window);
     glfwSetFramebufferSizeCallback(window, frameBufferSizeCallback);
 
+    // Setup Dear ImGui context
+    ImGuiIO& io = setupImGUI(window);
+
+    // Our state
+    bool show_demo_window = true;
+    ImVec4 clear_color = ImVec4(0.0f, 0.1f, 0.2f, 1.00f);
+
     glClearColor(0.0f, 0.1f, 0.2f, 1.0f);
 
     while (!glfwWindowShouldClose(window)) {
         handleEvents(window);
         glfwMakeContextCurrent(window);
-        //render()
+        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+        //render();
+
+        // Start the Dear ImGui frame
+        ImGui_ImplOpenGL3_NewFrame();
+        ImGui_ImplGlfw_NewFrame();
+        ImGui::NewFrame();
+
+        // Activate Dock Space
+        //ImGui::DockSpaceOverViewport(ImGui::GetMainViewport());
+
+        // 1. Show the big demo window (Most of the sample code is in ImGui::ShowDemoWindow()! You can browse its code to learn more about Dear ImGui!).
+        if (show_demo_window)
+            ImGui::ShowDemoWindow(&show_demo_window);
+
+        // 2. Show a simple window that we create ourselves. We use a Begin/End pair to create a named window.
+        {
+            ImGui::Begin("Settings");
+            ImGui::Text("Last render: %.3fms", 1.0);
+            if (ImGui::Button("Render"))
+            {
+                cam.render(world);
+            }
+
+            ImGui::End();
+        }
+
+        // Rendering
+        ImGui::Render();
+        int display_w, display_h;
+        glfwGetFramebufferSize(window, &display_w, &display_h);
+        glViewport(0, 0, display_w, display_h);
+        glClearColor(clear_color.x * clear_color.w, clear_color.y * clear_color.w, clear_color.z * clear_color.w, clear_color.w);
+        //glClear(GL_COLOR_BUFFER_BIT);
+        ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
+
+        // Update and Render additional Platform Windows
+        // (Platform functions may change the current OpenGL context, so we save/restore it to make it easier to paste this code elsewhere.
+        //  For this specific demo app we could also call glfwMakeContextCurrent(window) directly)
+        if (io.ConfigFlags & ImGuiConfigFlags_ViewportsEnable)
+        {
+            GLFWwindow* backup_current_context = glfwGetCurrentContext();
+            ImGui::UpdatePlatformWindows();
+            ImGui::RenderPlatformWindowsDefault();
+            glfwMakeContextCurrent(backup_current_context);
+        }
+
         glfwSwapBuffers(window);
         glfwPollEvents();
     }
+
+    // Cleanup
+    ImGui_ImplOpenGL3_Shutdown();
+    ImGui_ImplGlfw_Shutdown();
+    ImGui::DestroyContext();
 
     //cam.render(world);
     return 0;
