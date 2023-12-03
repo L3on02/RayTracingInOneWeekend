@@ -35,6 +35,17 @@ auto create_window(int image_width, int aspect_ratio) {
     return glfwCreateWindow(image_width, image_height, "ParallelSystems", nullptr, nullptr);
 }
 
+void handleEvents(GLFWwindow* window) {
+    if(glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS || glfwGetKey(window, GLFW_KEY_Q) == GLFW_PRESS) {
+        glfwSetWindowShouldClose(window, true);
+    }
+}
+
+void frameBufferSizeCallback(GLFWwindow* window, int width, int height) {
+    glfwMakeContextCurrent(window);
+    glViewport(0, 0, width, height);
+}
+
 int main() {
     // World
     hittable_list world;
@@ -95,7 +106,6 @@ int main() {
     cam.focus_dist = 10.0;
 
     auto window = create_window(1920, 16.0/9.0);
-
     if (!window)
     {
         printf("Creation of window failed!");
@@ -103,15 +113,24 @@ int main() {
         return 1;
     }
 
-    glfwMakeContextCurrent(window);
-
     GLenum err = glewInit();
     if (err != GLEW_OK)
     {
         printf("Init of glew failed! %s\n", glewGetErrorString(err));
     }
 
+    glfwMakeContextCurrent(window);
+    glfwSetFramebufferSizeCallback(window, frameBufferSizeCallback);
+
     glClearColor(0.0f, 0.1f, 0.2f, 1.0f);
+
+    while (!glfwWindowShouldClose(window)) {
+        handleEvents(window);
+        glfwMakeContextCurrent(window);
+        //render()
+        glfwSwapBuffers(window);
+        glfwPollEvents();
+    }
 
     //cam.render(world);
     return 0;
