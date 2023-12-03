@@ -1,18 +1,18 @@
-# Ignore all non-code files
-*
+.vscode/*
 
-# Except these file types
-!*.cc
-!*.cpp
-!*.hh
-!*.hpp
-!*.py
-!*.js
-!*.html
-!*.css
-!*.md
-!LICENSE
-!README.md
-!*.vscode/*
-!*.gitignore
-!*Makefile
+# CMake
+cmake-build-*
+build*
+.cache
+
+# CLion
+.run
+.idea
+
+# CUDA stuff
+*.i
+*.ii
+*.gpu
+*.ptx
+*.cubin
+*.fatbi
