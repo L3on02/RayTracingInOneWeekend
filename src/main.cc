@@ -312,10 +312,12 @@ int main() {
                 auto image = render_image(cam.image_width, image_height);
                 ImVec2 pos = ImGui::GetCursorScreenPos();
                 ImVec2 ws = ImGui::GetContentRegionAvail();
+                int max_x = ws.y * cam.aspect_ratio;
+                int centering = (ws.x - max_x) / 2;
                 ImGui::GetWindowDrawList()->AddImage(
                         reinterpret_cast<ImTextureID>(image),
-                        ImVec2(pos.x, pos.y),
-                        ImVec2(pos.x + ws.x, ws.y + pos.y),
+                        ImVec2(pos.x + centering, pos.y),
+                        ImVec2(pos.x + max_x + centering, ws.y + pos.y),
                         ImVec2(0, 1), ImVec2(1, 0));
                 /*if (image)
                     ImGui::Image(reinterpret_cast<ImTextureID>(image), {(float) cam.image_width, (float) image_height},
