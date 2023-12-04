@@ -20,8 +20,8 @@
 #include "sphere.hh"
 #include "material.hh"
 
-auto create_window(int image_width, int aspect_ratio) {
-    int image_height = static_cast<int>(image_width / aspect_ratio);
+auto create_window(int width, double aspect_ratio) {
+    int height = static_cast<int>(width / aspect_ratio);
 
     glfwInit();
     glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
@@ -41,7 +41,7 @@ auto create_window(int image_width, int aspect_ratio) {
     glfwWindowHint(GLFW_SAMPLES, 4);
     glEnable(GL_MULTISAMPLE);
 
-    return glfwCreateWindow(image_width, image_height, "ParallelSystems", nullptr, nullptr);
+    return glfwCreateWindow(width, height, "ParallelSystems", nullptr, nullptr);
 }
 
 void handleEvents(GLFWwindow* window) {
@@ -53,6 +53,17 @@ void handleEvents(GLFWwindow* window) {
 void frameBufferSizeCallback(GLFWwindow* window, int width, int height) {
     glfwMakeContextCurrent(window);
     glViewport(0, 0, width, height);
+}
+
+void keyCallback(GLFWwindow* window, int key, int scancode, int action, int mods) {
+	if (key == GLFW_KEY_R && action == GLFW_PRESS) {
+		show_render = false;
+	}
+}
+
+static void errorCallback(int error, const char* description)
+{
+    fprintf(stderr, "GLFW Error %d: %s\n", error, description);
 }
 
 ImGuiIO& setupImGUI(GLFWwindow* window) {
@@ -90,6 +101,65 @@ ImGuiIO& setupImGUI(GLFWwindow* window) {
 void render() {
     //clear color and depth buffer
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+}
+
+GLubyte* read_ppm(const char* filename, int* width, int* height) {
+    GLubyte *texture; // The texture image
+    int texName; // ID of texture
+// load texture
+    std::ifstream file;
+    file.open(filename, std::ios::in);
+    if (file.fail()) {
+        std::cout << "\n Error loading the texture";
+        std::cout.flush(); exit(0);
+    }
+    std::string skip;
+    std::getline(file, skip);
+    int texture_width, texture_height, max_value;
+
+    file >> texture_width;
+    file >> texture_height;
+    file >> max_value;
+    texture = new GLubyte[texture_width * texture_height * 4];
+
+    int m, n, c;
+    for(m = texture_height - 1; m >= 0; m--)
+        for(n = 0 ;n < texture_width; n++){
+            file >> c;
+            texture[(m*texture_width+n)*4]=(GLubyte) c;
+            file >> c;
+            texture[(m*texture_width+n)*4+1]=(GLubyte) c;
+            file >> c;
+            texture[(m*texture_width+n)*4+2]=(GLubyte) c;
+            texture[(m*texture_width+n)*4+3]=(GLubyte) 255;
+        }
+    file.close();
+    return texture;
+}
+
+GLuint render_image(int width, int height) {
+    std::string filename = std::filesystem::current_path().string().append("/image.ppm").c_str();
+    GLubyte* image_data = read_ppm(filename.c_str(), &width, &height);
+
+    glPixelStorei( GL_UNPACK_ALIGNMENT, 1 );
+
+    // Create a OpenGL texture identifier
+    GLuint texture;
+    glGenTextures(1, &texture);
+    glBindTexture(GL_TEXTURE_2D, texture);
+
+    // Setup filtering parameters for display
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE); // This is required on WebGL for non power-of-two textures
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE); // Same
+
+    // Upload pixels into texture
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, image_data);
+
+    delete[] image_data;
+
+    return texture;
 }
 
 int main() {
@@ -140,7 +210,7 @@ int main() {
 
     cam.aspect_ratio = 16.0 / 9.0;
     cam.image_width = 720;
-    cam.samples_per_pixel = 10;
+    cam.samples_per_pixel = 2;
     cam.max_depth = 5;
 
     cam.vfov = 20;
@@ -150,38 +220,44 @@ int main() {
 
     cam.defocus_angle = 0.6;
     cam.focus_dist = 10.0;
+	
+	glfwSetErrorCallback(errorCallback);
 
     int image_width = 720;
     int image_height = static_cast<int>(image_width / (16.0 / 9.0));
 
-    auto window = create_window(1920, 16.0/9.0);
+    auto window = create_window(image_width, 16.0/9.0);
     if (!window) {
         printf("Creation of window failed!");
         glfwTerminate();
         return 1;
     }
 
+    glfwMakeContextCurrent(window);
+    glfwSetFramebufferSizeCallback(window, frameBufferSizeCallback);
+	glfwSetKeyCallback(window, keyCallback);
+
     GLenum err = glewInit();
     if (err != GLEW_OK) {
         printf("Init of glew failed! %s\n", glewGetErrorString(err));
     }
-
-    glfwMakeContextCurrent(window);
-    glfwSetFramebufferSizeCallback(window, frameBufferSizeCallback);
 
     // Setup Dear ImGui context
     ImGuiIO& io = setupImGUI(window);
 
     // Our state
     bool show_demo_window = true;
+    bool show_render = false;
     ImVec4 clear_color = ImVec4(0.0f, 0.1f, 0.2f, 1.00f);
 
-    glClearColor(0.0f, 0.1f, 0.2f, 1.0f);
+    //glClearColor(0.0f, 0.1f, 0.2f, 1.0f);
 
     while (!glfwWindowShouldClose(window)) {
         handleEvents(window);
         glfwMakeContextCurrent(window);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+		glClearColor(clear_color.x * clear_color.w, clear_color.y * clear_color.w, clear_color.z * clear_color.w, clear_color.w);
+		
         //render();
 
         // Start the Dear ImGui frame
@@ -190,19 +266,75 @@ int main() {
         ImGui::NewFrame();
 
         // Activate Dock Space
-        //ImGui::DockSpaceOverViewport(ImGui::GetMainViewport());
+        //ImGui::DockSpaceOverViewport(ImGui::GetMainViewport(), ImGuiDockNodeFlags_NoDockingInCentralNode | ImGuiDockNodeFlags_PassthruCentralNode);
 
-        // 1. Show the big demo window (Most of the sample code is in ImGui::ShowDemoWindow()! You can browse its code to learn more about Dear ImGui!).
+        // Show the big demo window (Most of the sample code is in ImGui::ShowDemoWindow()! You can browse its code to learn more about Dear ImGui!).
         if (show_demo_window)
             ImGui::ShowDemoWindow(&show_demo_window);
 
-        // 2. Show a simple window that we create ourselves. We use a Begin/End pair to create a named window.
+        // Render image as background
+        /*auto image = render_image(image_width, image_height);
+        ImDrawList* list = ImGui::GetBackgroundDrawList(ImGui::GetMainViewport());
+        list->AddImage(reinterpret_cast<ImTextureID>(image), ImVec2(image_width, 30), ImVec2(0, image_height + 30));*/
+
         {
-            ImGui::Begin("Settings");
-            ImGui::Text("Last render: %.3fms", 1.0);
+            const ImGuiViewport* viewport = ImGui::GetMainViewport();
+            ImGui::SetNextWindowPos(viewport->WorkPos);
+            ImGui::SetNextWindowSize(viewport->WorkSize);
+            ImGui::SetNextWindowViewport(viewport->ID);
+            ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 0.0f);
+            ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize, 0.0f);
+
+            ImGuiWindowFlags window_flags = ImGuiWindowFlags_NoBackground | ImGuiWindowFlags_NoDocking;
+            window_flags |= ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove;
+            window_flags |= ImGuiWindowFlags_NoBringToFrontOnFocus | ImGuiWindowFlags_NoNavFocus;
+
+            static ImGuiDockNodeFlags dockspace_flags = ImGuiDockNodeFlags_NoResize | ImGuiDockNodeFlags_AutoHideTabBar;
+            dockspace_flags |= ImGuiDockNodeFlags_NoDockingInCentralNode | ImGuiDockNodeFlags_PassthruCentralNode;
+
+            ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0.0f, 0.0f));
+            ImGui::Begin("DockSpace", reinterpret_cast<bool *>(true), window_flags);
+            ImGui::PopStyleVar();
+            ImGui::PopStyleVar(2);
+
+            // Submit the DockSpace
+            ImGuiID dockspace_id = ImGui::GetID("Dockspace");
+            ImGui::DockSpace(dockspace_id, ImVec2(0.0f, 0.0f), dockspace_flags);
+
+            ImGui::End();
+        }
+        {
+            if (show_render) {
+                const ImGuiViewport *viewport = ImGui::GetMainViewport();
+                ImGui::SetNextWindowPos(viewport->WorkPos);
+                ImGui::SetNextWindowSize(viewport->WorkSize);
+                ImGui::SetNextWindowViewport(viewport->ID);
+                ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 0.0f);
+                ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize, 0.0f);
+                ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0.0f, 0.0f));
+
+                ImGuiWindowFlags window_flags = ImGuiWindowFlags_NoDocking | ImGuiWindowFlags_NoTitleBar;
+                window_flags |= ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove;
+                window_flags |= ImGuiWindowFlags_NoBringToFrontOnFocus | ImGuiWindowFlags_NoNavFocus;
+
+                ImGui::Begin("Image", reinterpret_cast<bool *>(true), window_flags);
+                ImGui::PopStyleVar();
+                ImGui::PopStyleVar(2);
+
+                auto image = render_image(image_width, image_height);
+                if (image)
+                    ImGui::Image(reinterpret_cast<ImTextureID>(image), {(float) image_width, (float) image_height},
+                                 ImVec2(0, 1), ImVec2(1, 0));
+                ImGui::End();
+            }
+        }
+        {
+            ImGui::Begin("Renderer");
+            ImGui::Text("Last render: %.3fs", 1.0);
             if (ImGui::Button("Render"))
             {
                 cam.render(world);
+                show_render = true;
             }
 
             ImGui::End();
@@ -210,11 +342,7 @@ int main() {
 
         // Rendering
         ImGui::Render();
-        int display_w, display_h;
-        glfwGetFramebufferSize(window, &display_w, &display_h);
-        glViewport(0, 0, display_w, display_h);
-        glClearColor(clear_color.x * clear_color.w, clear_color.y * clear_color.w, clear_color.z * clear_color.w, clear_color.w);
-        //glClear(GL_COLOR_BUFFER_BIT);
+		
         ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
 
         // Update and Render additional Platform Windows
@@ -236,6 +364,9 @@ int main() {
     ImGui_ImplOpenGL3_Shutdown();
     ImGui_ImplGlfw_Shutdown();
     ImGui::DestroyContext();
+	
+	glfwDestroyWindow(window);
+    glfwTerminate();
 
     //cam.render(world);
     return 0;
