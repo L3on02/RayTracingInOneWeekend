@@ -27,13 +27,14 @@ class camera {
     double focus_dist = 10; // Distance from Camera "Sensor" to plane of perfect focus (focal point)
 
     void render(const hittable& world) {
-        std::clog << "Render Resolution: " << image_width << "x" << image_width/aspect_ratio << std::endl;
         std::clog << "Starting render ...\n";
         // start timer
         auto start = std::chrono::high_resolution_clock::now();
 
         // initialize camera and viewport settings
         initialize();
+
+        std::clog << "Render Resolution: " << image_width << "x" << image_height << std::endl;
 
         // create shared memory object with task queue
         image_memory image(image_width, image_height);
