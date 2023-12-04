@@ -20,8 +20,8 @@
 #include "sphere.hh"
 #include "material.hh"
 
-auto create_window(int width, double aspect_ratio) {
-    int height = static_cast<int>(width / aspect_ratio);
+auto create_window(int height, double aspect_ratio) {
+    int width = static_cast<int>(height * aspect_ratio);
 
     glfwInit();
     glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
@@ -35,6 +35,7 @@ auto create_window(int width, double aspect_ratio) {
     glfwWindowHint(GLFW_STENCIL_BITS, 8);
     glfwWindowHint(GLFW_DEPTH_BITS, 24);
     glfwWindowHint(GLFW_RESIZABLE, true);
+    //glfwWindowHint(GLFW_DECORATED, false);
     glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);
 
 // Anti Aliasing - Multisampling
@@ -55,9 +56,11 @@ void frameBufferSizeCallback(GLFWwindow* window, int width, int height) {
     glViewport(0, 0, width, height);
 }
 
+bool show_render = false;
+
 void keyCallback(GLFWwindow* window, int key, int scancode, int action, int mods) {
 	if (key == GLFW_KEY_R && action == GLFW_PRESS) {
-		show_render = false;
+		show_render = !show_render;
 	}
 }
 
@@ -205,28 +208,11 @@ int main() {
 
     auto material3 = make_shared<metal>(color(0.7, 0.6, 0.5), 0.0);
     world.add(make_shared<sphere>(point3(4, 1, 0), 1.0, material3));
-
-    camera cam;
-
-    cam.aspect_ratio = 16.0 / 9.0;
-    cam.image_width = 720;
-    cam.samples_per_pixel = 2;
-    cam.max_depth = 5;
-
-    cam.vfov = 20;
-    cam.lookfrom = point3(13,2,3);
-    cam.lookat = point3(0,0,0);
-    cam.vup = vec3(0,1,0);
-
-    cam.defocus_angle = 0.6;
-    cam.focus_dist = 10.0;
 	
 	glfwSetErrorCallback(errorCallback);
 
-    int image_width = 720;
-    int image_height = static_cast<int>(image_width / (16.0 / 9.0));
-
-    auto window = create_window(image_width, 16.0/9.0);
+    int window_height = 720;
+    auto window = create_window(window_height, 16.0/9.0);
     if (!window) {
         printf("Creation of window failed!");
         glfwTerminate();
@@ -247,8 +233,9 @@ int main() {
 
     // Our state
     bool show_demo_window = true;
-    bool show_render = false;
     ImVec4 clear_color = ImVec4(0.0f, 0.1f, 0.2f, 1.00f);
+
+    camera cam;
 
     //glClearColor(0.0f, 0.1f, 0.2f, 1.0f);
 
@@ -321,18 +308,51 @@ int main() {
                 ImGui::PopStyleVar();
                 ImGui::PopStyleVar(2);
 
-                auto image = render_image(image_width, image_height);
-                if (image)
-                    ImGui::Image(reinterpret_cast<ImTextureID>(image), {(float) image_width, (float) image_height},
-                                 ImVec2(0, 1), ImVec2(1, 0));
+                int image_height = cam.image_width / cam.aspect_ratio;
+                auto image = render_image(cam.image_width, image_height);
+                ImVec2 pos = ImGui::GetCursorScreenPos();
+                ImVec2 ws = ImGui::GetContentRegionAvail();
+                ImGui::GetWindowDrawList()->AddImage(
+                        reinterpret_cast<ImTextureID>(image),
+                        ImVec2(pos.x, pos.y),
+                        ImVec2(pos.x + ws.x, ws.y + pos.y),
+                        ImVec2(0, 1), ImVec2(1, 0));
+                /*if (image)
+                    ImGui::Image(reinterpret_cast<ImTextureID>(image), {(float) cam.image_width, (float) image_height},
+                                 ImVec2(0, 1), ImVec2(1, 0));*/
                 ImGui::End();
             }
         }
         {
             ImGui::Begin("Renderer");
             ImGui::Text("Last render: %.3fs", 1.0);
+            enum Aspect_Ratio { AR43, AR169, Ratio_COUNT };
+            static int ar = AR169;
+            const double aspect_ratios[Ratio_COUNT] = { 4.0 / 3.0, 16.0 / 9.0 };
+            const char* aspect_ratio_names[Ratio_COUNT] = { "4:3", "16:9" };
+            const char* aspect_ratio = (ar >= 0 && ar < Ratio_COUNT) ? aspect_ratio_names[ar] : "Unknown";
+            ImGui::SliderInt("Aspect Ratio", &ar, 0, Ratio_COUNT - 1, aspect_ratio);
+            enum Image_Height { IW480P, IW720P, IW1080P, IW4K, IW8K, Height_COUNT };
+            static int ih = IW720P;
+            const int image_heights[Height_COUNT] = { 480, 720, 1080, 2160, 4320 };
+            const char* height = (ih >= 0 && ih < Height_COUNT) ? std::to_string(image_heights[ih]).c_str()
+                                                              : "Unknown";
+            ImGui::SliderInt("Image Height", &ih, 0, Height_COUNT - 1, height);
             if (ImGui::Button("Render"))
             {
+                cam.aspect_ratio = aspect_ratios[ar];
+                cam.image_width = image_heights[ih];
+                cam.samples_per_pixel = 10;
+                cam.max_depth = 5;
+
+                cam.vfov = 20;
+                cam.lookfrom = point3(13,2,3);
+                cam.lookat = point3(0,0,0);
+                cam.vup = vec3(0,1,0);
+
+                cam.defocus_angle = 0.6;
+                cam.focus_dist = 10.0;
+
                 cam.render(world);
                 show_render = true;
             }
