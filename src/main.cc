@@ -42,7 +42,10 @@ auto create_window(int height, double aspect_ratio) {
     glfwWindowHint(GLFW_SAMPLES, 4);
     glEnable(GL_MULTISAMPLE);
 
-    return glfwCreateWindow(width, height, "ParallelSystems", nullptr, nullptr);
+    std::ostringstream title;
+    title << "ParallelSystems - (" << width << "x" << height << ")";
+
+    return glfwCreateWindow(width, height, title.str().c_str(), nullptr, nullptr);
 }
 
 void handleEvents(GLFWwindow* window) {
@@ -64,8 +67,7 @@ void keyCallback(GLFWwindow* window, int key, int scancode, int action, int mods
 	}
 }
 
-static void errorCallback(int error, const char* description)
-{
+static void errorCallback(int error, const char* description) {
     fprintf(stderr, "GLFW Error %d: %s\n", error, description);
 }
 
@@ -108,13 +110,10 @@ void render() {
 
 GLubyte* read_ppm(const char* filename, int* width, int* height) {
     GLubyte *texture; // The texture image
-    int texName; // ID of texture
-// load texture
     std::ifstream file;
     file.open(filename, std::ios::in);
     if (file.fail()) {
-        std::cout << "\n Error loading the texture";
-        std::cout.flush(); exit(0);
+        std::cerr << "Error loading the texture" << std::endl;
     }
     std::string skip;
     std::getline(file, skip);
@@ -126,16 +125,17 @@ GLubyte* read_ppm(const char* filename, int* width, int* height) {
     texture = new GLubyte[texture_width * texture_height * 4];
 
     int m, n, c;
-    for(m = texture_height - 1; m >= 0; m--)
-        for(n = 0 ;n < texture_width; n++){
+    for(m = texture_height - 1; m >= 0; m--) {
+        for (n = 0; n < texture_width; n++) {
             file >> c;
-            texture[(m*texture_width+n)*4]=(GLubyte) c;
+            texture[(m * texture_width + n) * 4] = (GLubyte) c;
             file >> c;
-            texture[(m*texture_width+n)*4+1]=(GLubyte) c;
+            texture[(m * texture_width + n) * 4 + 1] = (GLubyte) c;
             file >> c;
-            texture[(m*texture_width+n)*4+2]=(GLubyte) c;
-            texture[(m*texture_width+n)*4+3]=(GLubyte) 255;
+            texture[(m * texture_width + n) * 4 + 2] = (GLubyte) c;
+            texture[(m * texture_width + n) * 4 + 3] = (GLubyte) 255;
         }
+    }
     file.close();
     return texture;
 }
@@ -211,7 +211,7 @@ int main() {
 	
 	glfwSetErrorCallback(errorCallback);
 
-    int window_height = 720;
+    int window_height = 480;
     auto window = create_window(window_height, 16.0/9.0);
     if (!window) {
         printf("Creation of window failed!");
@@ -236,6 +236,7 @@ int main() {
     ImVec4 clear_color = ImVec4(0.0f, 0.1f, 0.2f, 1.00f);
 
     camera cam;
+    GLuint image;
 
     //glClearColor(0.0f, 0.1f, 0.2f, 1.0f);
 
@@ -308,8 +309,8 @@ int main() {
                 ImGui::PopStyleVar();
                 ImGui::PopStyleVar(2);
 
-                int image_height = cam.image_width / cam.aspect_ratio;
-                auto image = render_image(cam.image_width, image_height);
+                //int image_height = cam.image_width / cam.aspect_ratio;
+                //image = render_image(cam.image_width, image_height);
                 ImVec2 pos = ImGui::GetCursorScreenPos();
                 ImVec2 ws = ImGui::GetContentRegionAvail();
                 int max_x = ws.y * cam.aspect_ratio;
@@ -327,25 +328,46 @@ int main() {
         }
         {
             ImGui::Begin("Renderer");
-            ImGui::Text("Last render: %.3fs", 1.0);
             enum Aspect_Ratio { AR43, AR169, Ratio_COUNT };
             static int ar = AR169;
             const double aspect_ratios[Ratio_COUNT] = { 4.0 / 3.0, 16.0 / 9.0 };
             const char* aspect_ratio_names[Ratio_COUNT] = { "4:3", "16:9" };
             const char* aspect_ratio = (ar >= 0 && ar < Ratio_COUNT) ? aspect_ratio_names[ar] : "Unknown";
-            ImGui::SliderInt("Aspect Ratio", &ar, 0, Ratio_COUNT - 1, aspect_ratio);
+
             enum Image_Height { IW480P, IW720P, IW1080P, IW4K, IW8K, Height_COUNT };
             static int ih = IW720P;
             const int image_heights[Height_COUNT] = { 480, 720, 1080, 2160, 4320 };
-            const char* height = (ih >= 0 && ih < Height_COUNT) ? std::to_string(image_heights[ih]).c_str()
-                                                              : "Unknown";
-            ImGui::SliderInt("Image Height", &ih, 0, Height_COUNT - 1, height);
-            if (ImGui::Button("Render"))
-            {
+            const char* height = (ih >= 0 && ih < Height_COUNT) ? std::to_string(image_heights[ih]).c_str() : "Unknown";
+
+            if (ImGui::CollapsingHeader("Image Options", ImGuiTreeNodeFlags_DefaultOpen)) {
+                ImGui::SliderInt("Aspect Ratio", &ar, 0, Ratio_COUNT - 1, aspect_ratio);
+                ImGui::SliderInt("Image Height", &ih, 0, Height_COUNT - 1, height);
+            }
+
+            enum SPP { SPP1, SPP10, SPP50, SPP100, SPP_COUNT };
+            static int spp = SPP10;
+            const int spp_values[SPP_COUNT] = { 1, 10, 50, 100 };
+
+            enum Depth { D1, D10, D25, D50, DEPTH_COUNT };
+            static int depth = D50;
+            const int depth_values[DEPTH_COUNT] = { 1, 10, 25, 50 };
+
+            static int cpu_count = std::thread::hardware_concurrency();
+            if (ImGui::CollapsingHeader("Render Options", ImGuiTreeNodeFlags_DefaultOpen)) {
+                const char* spp_name = (spp >= 0 && spp < SPP_COUNT) ? std::to_string(spp_values[spp]).c_str() : "Unknown";
+                ImGui::SliderInt("Samples per Pixel", &spp, 0, SPP_COUNT - 1, spp_name);
+                const char* depth_name = (depth >= 0 && depth < DEPTH_COUNT) ? std::to_string(depth_values[depth]).c_str() : "Unknown";
+                ImGui::SliderInt("Max Depth", &depth, 0, DEPTH_COUNT - 1, depth_name);
+                ImGui::SliderInt("CPU Cores", &cpu_count, 1, std::thread::hardware_concurrency());
+            }
+            ImGui::NewLine();
+            if (ImGui::Button("Render")) {
                 cam.aspect_ratio = aspect_ratios[ar];
-                cam.image_width = image_heights[ih];
-                cam.samples_per_pixel = 10;
-                cam.max_depth = 50;
+                cam.image_height = image_heights[ih];
+                cam.samples_per_pixel = spp_values[spp];
+                cam.max_depth = depth_values[depth];
+
+                cam.processor_count = cpu_count;
 
                 cam.vfov = 20;
                 cam.lookfrom = point3(13,2,3);
@@ -356,9 +378,10 @@ int main() {
                 cam.focus_dist = 10.0;
 
                 cam.render(world);
+                image = render_image((cam.image_height * cam.aspect_ratio), cam.image_height);
                 show_render = true;
             }
-
+            ImGui::SameLine(); ImGui::Text("Last render: %.3fs", cam.last_render_time);
             ImGui::End();
         }
 
