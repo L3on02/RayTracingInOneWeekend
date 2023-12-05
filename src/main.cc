@@ -309,8 +309,8 @@ int main() {
                 ImGui::PopStyleVar();
                 ImGui::PopStyleVar(2);
 
-                //int image_height = cam.image_width / cam.aspect_ratio;
-                //image = render_image(cam.image_width, image_height);
+                //int image_width = std::ceil(cam.image_height * cam.aspect_ratio);
+                //image = image = render_image(image_width, cam.image_height);
                 ImVec2 pos = ImGui::GetCursorScreenPos();
                 ImVec2 ws = ImGui::GetContentRegionAvail();
                 int max_x = ws.y * cam.aspect_ratio;
@@ -327,7 +327,7 @@ int main() {
             }
         }
         {
-            ImGui::Begin("Renderer");
+            ImGui::Begin("Renderer", NULL, ImGuiWindowFlags_AlwaysAutoResize);
             enum Aspect_Ratio { AR43, AR169, Ratio_COUNT };
             static int ar = AR169;
             const double aspect_ratios[Ratio_COUNT] = { 4.0 / 3.0, 16.0 / 9.0 };
@@ -361,27 +361,33 @@ int main() {
                 ImGui::SliderInt("CPU Cores", &cpu_count, 1, std::thread::hardware_concurrency());
             }
             ImGui::NewLine();
-            if (ImGui::Button("Render")) {
-                cam.aspect_ratio = aspect_ratios[ar];
-                cam.image_height = image_heights[ih];
-                cam.samples_per_pixel = spp_values[spp];
-                cam.max_depth = depth_values[depth];
 
-                cam.processor_count = cpu_count;
+            cam.aspect_ratio = aspect_ratios[ar];
+            cam.image_height = image_heights[ih];
+            cam.samples_per_pixel = spp_values[spp];
+            cam.max_depth = depth_values[depth];
 
-                cam.vfov = 20;
-                cam.lookfrom = point3(13,2,3);
-                cam.lookat = point3(0,0,0);
-                cam.vup = vec3(0,1,0);
+            cam.processor_count = cpu_count;
 
-                cam.defocus_angle = 0.6;
-                cam.focus_dist = 10.0;
+            cam.vfov = 20;
+            cam.lookfrom = point3(13,2,3);
+            cam.lookat = point3(0,0,0);
+            cam.vup = vec3(0,1,0);
 
+            cam.defocus_angle = 0.6;
+            cam.focus_dist = 10.0;
+
+            ImVec2 sz = ImVec2(ImGui::GetWindowWidth() * 0.3f, 0.0f);
+            if (ImGui::Button("Render", sz)) {
                 cam.render(world);
-                image = render_image((cam.image_height * cam.aspect_ratio), cam.image_height);
+                image = render_image(std::ceil(cam.image_height * cam.aspect_ratio), cam.image_height);
                 show_render = true;
             }
-            ImGui::SameLine(); ImGui::Text("Last render: %.3fs", cam.last_render_time);
+            if (cam.last_render_time > 0) {
+                //ImGui::SameLine();
+                ImGui::Text("Last render: %.3fs | %dx%d", cam.last_render_time, cam.image_height,
+                            (int) std::ceil(cam.image_height * cam.aspect_ratio));
+            }
             ImGui::End();
         }
 
