@@ -14,9 +14,10 @@
 class camera {
   public:
     double aspect_ratio = 1.0; // Ratio of image width over height
-    int image_width = 100; // Rendered image width in pixel count
+    int image_height = 100; // Rendered image width in pixel count
     int samples_per_pixel = 10; // Count of random samples for each pixel
     int max_depth = 10; // Maximum bounces that are calculated for each ray
+    int processor_count = std::thread::hardware_concurrency(); // Maximum cores to use
 
     double vfov = 90; // vertical view angle (field of view)
     point3 lookfrom = point3(0, 0, 1); // where camera is looking "from"
@@ -25,6 +26,8 @@ class camera {
 
     double defocus_angle = 0; // Variation in angle of rays through each pixel
     double focus_dist = 10; // Distance from Camera "Sensor" to plane of perfect focus (focal point)
+
+    double last_render_time = 0;
 
     void render(const hittable& world) {
         std::clog << "Starting render ...\n";
@@ -58,13 +61,13 @@ class camera {
         // stop timer
         auto stop = std::chrono::high_resolution_clock::now();
         std::chrono::duration<double> elapsed = stop - start;
+        last_render_time = elapsed.count();
 
         std::clog << "Done in " << std::fixed << std::setprecision(2) << elapsed.count() << " seconds.\n";
     }
 
   private:
-    int image_height;   // Rendered image height
-    int processor_count; 
+    int image_width;   // Rendered image height
     point3 camera_center;         // Camera center
     point3 pixel00_loc;    // Location of pixel 0, 0
     vec3 pixel_delta_u;  // Offset to pixel to the right
@@ -75,11 +78,10 @@ class camera {
 
 
     void initialize() {
-        image_height = static_cast<int>(image_width / aspect_ratio);
-        image_height = image_height >= 1 ? image_height : 1;
+        image_width = static_cast<int>(image_height * aspect_ratio);
+        image_width = image_width >= 1 ? image_width : 1;
 
         // Read number of available processors
-        processor_count = std::thread::hardware_concurrency();
         std::clog << "Using " << processor_count << " threads.\n";
 
         // Camera/viewport settings
