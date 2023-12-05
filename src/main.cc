@@ -253,18 +253,6 @@ int main() {
         ImGui_ImplGlfw_NewFrame();
         ImGui::NewFrame();
 
-        // Activate Dock Space
-        //ImGui::DockSpaceOverViewport(ImGui::GetMainViewport(), ImGuiDockNodeFlags_NoDockingInCentralNode | ImGuiDockNodeFlags_PassthruCentralNode);
-
-        // Show the big demo window (Most of the sample code is in ImGui::ShowDemoWindow()! You can browse its code to learn more about Dear ImGui!).
-        if (show_demo_window)
-            ImGui::ShowDemoWindow(&show_demo_window);
-
-        // Render image as background
-        /*auto image = render_image(image_width, image_height);
-        ImDrawList* list = ImGui::GetBackgroundDrawList(ImGui::GetMainViewport());
-        list->AddImage(reinterpret_cast<ImTextureID>(image), ImVec2(image_width, 30), ImVec2(0, image_height + 30));*/
-
         {
             const ImGuiViewport* viewport = ImGui::GetMainViewport();
             ImGui::SetNextWindowPos(viewport->WorkPos);
@@ -277,7 +265,7 @@ int main() {
             window_flags |= ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove;
             window_flags |= ImGuiWindowFlags_NoBringToFrontOnFocus | ImGuiWindowFlags_NoNavFocus;
 
-            static ImGuiDockNodeFlags dockspace_flags = ImGuiDockNodeFlags_NoResize | ImGuiDockNodeFlags_AutoHideTabBar;
+            static ImGuiDockNodeFlags dockspace_flags = ImGuiDockNodeFlags_AutoHideTabBar;
             dockspace_flags |= ImGuiDockNodeFlags_NoDockingInCentralNode | ImGuiDockNodeFlags_PassthruCentralNode;
 
             ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0.0f, 0.0f));
@@ -327,7 +315,7 @@ int main() {
             }
         }
         {
-            ImGui::Begin("Renderer", NULL, ImGuiWindowFlags_AlwaysAutoResize);
+            ImGui::Begin("Renderer");
             enum Aspect_Ratio { AR43, AR169, Ratio_COUNT };
             static int ar = AR169;
             const double aspect_ratios[Ratio_COUNT] = { 4.0 / 3.0, 16.0 / 9.0 };
@@ -370,28 +358,28 @@ int main() {
                 ImGui::SliderInt("FOV", &fov, 0, 90);
                 ImGui::InputInt3("Camera Position", look_from);
                 ImGui::InputInt3("Focus Point", look_at);
-                ImGui::SliderAngle("Defocus Angle", &defocus_angle);
+                ImGui::SliderAngle("Defocus Angle", &defocus_angle, 0, 180);
                 ImGui::InputDouble("Focal Length", &focal_length, 0, 0, "%.1f");
             }
             ImGui::NewLine();
 
-            cam.aspect_ratio = aspect_ratios[ar];
-            cam.image_height = image_heights[ih];
-            cam.samples_per_pixel = spp_values[spp];
-            cam.max_depth = depth_values[depth];
-
-            cam.processor_count = cpu_count;
-
-            cam.vfov = fov;
-            cam.lookfrom = point3(look_from[0],look_from[1],look_from[2]);
-            cam.lookat = point3(look_at[0],look_at[1],look_at[2]);
-            cam.vup = vec3(0,1,0);
-
-            cam.defocus_angle = defocus_angle;
-            cam.focus_dist = focal_length;
-
             ImVec2 sz = ImVec2(ImGui::GetWindowWidth() * 0.3f, 0.0f);
             if (ImGui::Button("Render", sz)) {
+                cam.aspect_ratio = aspect_ratios[ar];
+                cam.image_height = image_heights[ih];
+                cam.samples_per_pixel = spp_values[spp];
+                cam.max_depth = depth_values[depth];
+
+                cam.processor_count = cpu_count;
+
+                cam.vfov = fov;
+                cam.lookfrom = point3(look_from[0],look_from[1],look_from[2]);
+                cam.lookat = point3(look_at[0],look_at[1],look_at[2]);
+                cam.vup = vec3(0,1,0);
+
+                cam.defocus_angle = defocus_angle;
+                cam.focus_dist = focal_length;
+
                 cam.render(world);
                 image = render_image(std::ceil(cam.image_height * cam.aspect_ratio), cam.image_height);
                 show_render = true;
