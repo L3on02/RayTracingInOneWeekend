@@ -78,7 +78,7 @@ class camera {
 
 
     void initialize() {
-        image_width = static_cast<int>(image_height * aspect_ratio);
+        image_width = std::ceil(image_height * aspect_ratio);
         image_width = image_width >= 1 ? image_width : 1;
 
         // Read number of available processors

@@ -21,7 +21,7 @@
 #include "material.hh"
 
 auto create_window(int height, double aspect_ratio) {
-    int width = static_cast<int>(height * aspect_ratio);
+    int width = std::ceil(height * aspect_ratio);
 
     glfwInit();
     glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
@@ -38,7 +38,7 @@ auto create_window(int height, double aspect_ratio) {
     //glfwWindowHint(GLFW_DECORATED, false);
     glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);
 
-// Anti Aliasing - Multisampling
+    // Anti Aliasing - Multisampling
     glfwWindowHint(GLFW_SAMPLES, 4);
     glEnable(GL_MULTISAMPLE);
 
@@ -211,7 +211,7 @@ int main() {
 	
 	glfwSetErrorCallback(errorCallback);
 
-    int window_height = 480;
+    int window_height = 720;
     auto window = create_window(window_height, 16.0/9.0);
     if (!window) {
         printf("Creation of window failed!");
