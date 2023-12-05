@@ -360,6 +360,19 @@ int main() {
                 ImGui::SliderInt("Max Depth", &depth, 0, DEPTH_COUNT - 1, depth_name);
                 ImGui::SliderInt("CPU Cores", &cpu_count, 1, std::thread::hardware_concurrency());
             }
+
+            static int fov = 20;
+            static int look_from[3] = {13,2,3};
+            static int look_at[3] = {0,0,0};
+            static double focal_length = 10.0;
+            static float defocus_angle = 0.6f;
+            if (ImGui::CollapsingHeader("Camera Options", ImGuiTreeNodeFlags_DefaultOpen)) {
+                ImGui::SliderInt("FOV", &fov, 0, 90);
+                ImGui::InputInt3("Camera Position", look_from);
+                ImGui::InputInt3("Focus Point", look_at);
+                ImGui::SliderAngle("Defocus Angle", &defocus_angle);
+                ImGui::InputDouble("Focal Length", &focal_length, 0, 0, "%.1f");
+            }
             ImGui::NewLine();
 
             cam.aspect_ratio = aspect_ratios[ar];
@@ -369,13 +382,13 @@ int main() {
 
             cam.processor_count = cpu_count;
 
-            cam.vfov = 20;
-            cam.lookfrom = point3(13,2,3);
-            cam.lookat = point3(0,0,0);
+            cam.vfov = fov;
+            cam.lookfrom = point3(look_from[0],look_from[1],look_from[2]);
+            cam.lookat = point3(look_at[0],look_at[1],look_at[2]);
             cam.vup = vec3(0,1,0);
 
-            cam.defocus_angle = 0.6;
-            cam.focus_dist = 10.0;
+            cam.defocus_angle = defocus_angle;
+            cam.focus_dist = focal_length;
 
             ImVec2 sz = ImVec2(ImGui::GetWindowWidth() * 0.3f, 0.0f);
             if (ImGui::Button("Render", sz)) {
