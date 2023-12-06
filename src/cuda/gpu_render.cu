@@ -1,3 +1,5 @@
+#include "gpu_render.cuh"
+
 #include "vec3.cuh"
 #include "ray.cuh"
 #include "sphere.cuh"
@@ -107,7 +109,7 @@ __global__ void render(vec3 *fb, int max_x, int max_y, int ns, camera **cam, hit
 #define RND (curand_uniform(&local_rand_state))
 
 __global__ void create_world(hittable **d_list, hittable **d_world, camera **d_camera, int nx, int ny, curandState *rand_state,
-                            vec3 camera_pos, vec3 focal_point, float aspect_ratio, float vfov, float aperture)
+                            vec3 camera_pos, vec3 focal_point, float aspect_ratio, float vfov, float defocus_angle)
 {
     if (threadIdx.x == 0 && blockIdx.x == 0)
     {
@@ -145,6 +147,7 @@ __global__ void create_world(hittable **d_list, hittable **d_world, camera **d_c
 
         vec3 cam_up(0, 1, 0);
         float focal_length = (camera_pos - focal_point).length();
+        float aperture = defocus_angle;//focal_length * tan(defocus_angle * M_PI / 360.0f);
         *d_camera = new camera(camera_pos,
                                focal_point,
                                cam_up,
@@ -167,7 +170,10 @@ __global__ void free_world(hittable **d_list, hittable **d_world, camera **d_cam
 }
 
 
-void cuda_render(int ny, float aspect_ratio, int ns, int max_depth, vec3 camera_pos, vec3 focal_point, float vfov, float aperture, double &last_render_time) {
+void gpu_render(int ny, float aspect_ratio, int ns, int max_depth, point _camera_pos, point _focal_point, float vfov, float aperture, double &last_render_time) {
+    vec3 camera_pos(_camera_pos.x, _camera_pos.y, _camera_pos.z);
+    vec3 focal_point(_focal_point.x, _focal_point.y, _focal_point.z);
+
     int nx = ny * aspect_ratio;
     int tx = 8;
     int ty = 8;

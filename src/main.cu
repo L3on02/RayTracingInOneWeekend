@@ -1,5 +1,6 @@
 #include "gui.cuh"
-#include "cu_render.cuh"
+#include "cuda/gpu_render.cuh"
+#include "cpp/cpu_render.hh"
 #include <thread>
 
 int main() {
@@ -117,6 +118,12 @@ int main() {
                 ImGui::SliderInt("Image Height", &ih, 0, Height_COUNT - 1, height);
             }
 
+            enum Render_Method { CPU, GPU, OPTION_COUNT };
+            static int rm = CPU;
+            const bool render_methods[OPTION_COUNT] = { false, true };
+            const char* render_method_names[OPTION_COUNT] = { "CPU", "GPU" };
+            const char* render_method_name = (ar >= 0 && ar < OPTION_COUNT) ? render_method_names[rm] : "Unknown";
+
             enum SPP { SPP1, SPP10, SPP50, SPP100, SPP500, SPP1000, SPP_COUNT };
             static int spp = SPP10;
             const int spp_values[SPP_COUNT] = { 1, 10, 50, 100, 500, 1000 };
@@ -126,7 +133,9 @@ int main() {
             const int depth_values[DEPTH_COUNT] = { 1, 10, 25, 50 };
 
             static int cpu_count = std::thread::hardware_concurrency();
+            static bool render_on_device = true;
             if (ImGui::CollapsingHeader("Render Options", ImGuiTreeNodeFlags_DefaultOpen)) {
+                ImGui::SliderInt("Render Method", &rm, 0, OPTION_COUNT - 1, render_method_name);
                 const char* spp_name = (spp >= 0 && spp < SPP_COUNT) ? std::to_string(spp_values[spp]).c_str() : "Unknown";
                 ImGui::SliderInt("Samples per Pixel", &spp, 0, SPP_COUNT - 1, spp_name);
                 const char* depth_name = (depth >= 0 && depth < DEPTH_COUNT) ? std::to_string(depth_values[depth]).c_str() : "Unknown";
@@ -149,10 +158,15 @@ int main() {
             ImVec2 sz = ImVec2(ImGui::GetWindowWidth() * 0.3f, 0.0f);
             if (ImGui::Button("Render", sz)) {
                 image_aspect_ratio = aspect_ratios[ar];
-                vec3 cam_pos(look_from[0],look_from[1],look_from[2]);
-                vec3 focal_point(look_at[0],look_at[1],look_at[2]);
+                render_on_device = render_methods[rm];
+                point cam_pos = {look_from[0],look_from[1],look_from[2]};
+                point focal_point = {look_at[0],look_at[1],look_at[2]};
 
-                cuda_render(image_heights[ih], aspect_ratios[ar], spp_values[spp], depth_values[depth], cam_pos, focal_point, fov, aperture, last_render_time);
+                if(render_on_device)
+                    gpu_render(image_heights[ih], aspect_ratios[ar], spp_values[spp], depth_values[depth], cam_pos, focal_point, fov, aperture, last_render_time);
+                else
+                    cpu_render(image_heights[ih], aspect_ratios[ar], spp_values[spp], depth_values[depth], cam_pos, focal_point, fov, aperture, last_render_time);
+                    // void cpu_render(double _aspect_ratio, int _image_height, int _samples_per_pixel, int _max_depth, double _vfov, point _cam_pos, point _focal_point, double _aperture);
                                 
                 image = render_image(std::ceil(image_heights[ih] * aspect_ratios[ar]), image_heights[ih]);
                 show_render = true;
