@@ -3,6 +3,7 @@
 # CMake
 cmake-build-*
 .cache
+build*/*
 
 # CLion
 .run
