@@ -1,3 +1,0 @@
-/home/lmaag/RayTracingInOneWeekend/build/CMakeFiles/ParallelSystems.dir
-/home/lmaag/RayTracingInOneWeekend/build/CMakeFiles/edit_cache.dir
-/home/lmaag/RayTracingInOneWeekend/build/CMakeFiles/rebuild_cache.dir
