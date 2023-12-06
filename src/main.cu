@@ -1,245 +1,197 @@
-#include <iostream>
-#include <time.h>
-#include <float.h>
-#include <curand_kernel.h>
+#include "gui.cuh"
+#include "cu_render.cuh"
+#include <thread>
 
-#include "vec3.cuh"
-#include "ray.cuh"
-#include "sphere.cuh"
-#include "hittable_list.cuh"
-#include "camera.cuh"
-#include "material.cuh"
+int main() {
+	glfwSetErrorCallback(errorCallback);
 
-#include "color.cuh"
-
-// limited version of checkCudaErrors from helper_cuda.h in CUDA examples
-#define checkCudaErrors(val) check_cuda((val), #val, __FILE__, __LINE__)
-
-void check_cuda(cudaError_t result, char const *const func, const char *const file, int const line)
-{
-    if (result)
-    {
-        std::cerr << "CUDA error = " << static_cast<unsigned int>(result) << " at " << file << ":" << line << " '" << func << "' \n";
-        std::cerr << "Error String: " << cudaGetErrorString(result) << "\n";
-        // Make sure we call CUDA Device Reset before exiting
-        cudaDeviceReset();
-        exit(99);
+    int window_height = 720;
+    auto window = create_window(window_height, 16.0/9.0);
+    if (!window) {
+        printf("Creation of window failed!");
+        glfwTerminate();
+        return 1;
     }
-}
 
-__device__ vec3 color(const ray &r, hittable **world, curandState *local_rand_state)
-{
-    ray cur_ray = r;
-    vec3 cur_attenuation = vec3(1.0, 1.0, 1.0);
-    for (int i = 0; i < 50; i++)
-    {
-        hit_record rec;
-        if ((*world)->hit(cur_ray, 0.001f, FLT_MAX, rec))
+    glfwMakeContextCurrent(window);
+    glfwSetFramebufferSizeCallback(window, frameBufferSizeCallback);
+	glfwSetKeyCallback(window, keyCallback);
+
+    GLenum err = glewInit();
+    if (err != GLEW_OK) {
+        printf("Init of glew failed! %s\n", glewGetErrorString(err));
+    }
+
+    // Setup Dear ImGui context
+    ImGuiIO& io = setupImGUI(window);
+
+    // Our state
+    ImVec4 clear_color = ImVec4(0.0f, 0.1f, 0.2f, 1.00f);
+
+    GLuint image;
+
+    float image_aspect_ratio = 16.0f/9.0f;
+    double last_render_time = 0.0;
+    while (!glfwWindowShouldClose(window)) {
+        handleEvents(window);
+        glfwMakeContextCurrent(window);
+        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+		glClearColor(clear_color.x * clear_color.w, clear_color.y * clear_color.w, clear_color.z * clear_color.w, clear_color.w);
+
+        // Start the Dear ImGui frame
+        ImGui_ImplOpenGL3_NewFrame();
+        ImGui_ImplGlfw_NewFrame();
+        ImGui::NewFrame();
+
         {
-            ray scattered;
-            vec3 attenuation;
-            if (rec.mat_ptr->scatter(cur_ray, rec, attenuation, scattered, local_rand_state))
-            {
-                cur_attenuation *= attenuation;
-                cur_ray = scattered;
-            }
-            else
-            {
-                return vec3(0.0, 0.0, 0.0);
-            }
+            const ImGuiViewport* viewport = ImGui::GetMainViewport();
+            ImGui::SetNextWindowPos(viewport->WorkPos);
+            ImGui::SetNextWindowSize(viewport->WorkSize);
+            ImGui::SetNextWindowViewport(viewport->ID);
+            ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 0.0f);
+            ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize, 0.0f);
+
+            ImGuiWindowFlags window_flags = ImGuiWindowFlags_NoBackground | ImGuiWindowFlags_NoDocking;
+            window_flags |= ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove;
+            window_flags |= ImGuiWindowFlags_NoBringToFrontOnFocus | ImGuiWindowFlags_NoNavFocus;
+
+            static ImGuiDockNodeFlags dockspace_flags = ImGuiDockNodeFlags_AutoHideTabBar;
+            dockspace_flags |= ImGuiDockNodeFlags_NoDockingInCentralNode | ImGuiDockNodeFlags_PassthruCentralNode;
+
+            ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0.0f, 0.0f));
+            ImGui::Begin("DockSpace", reinterpret_cast<bool *>(true), window_flags);
+            ImGui::PopStyleVar();
+            ImGui::PopStyleVar(2);
+
+            // Submit the DockSpace
+            ImGuiID dockspace_id = ImGui::GetID("Dockspace");
+            ImGui::DockSpace(dockspace_id, ImVec2(0.0f, 0.0f), dockspace_flags);
+
+            ImGui::End();
         }
-        else
         {
-            vec3 unit_direction = unit_vector(cur_ray.direction());
-            float t = 0.5f * (unit_direction.y() + 1.0f);
-            vec3 c = (1.0f - t) * vec3(1.0, 1.0, 1.0) + t * vec3(0.5, 0.7, 1.0);
-            return cur_attenuation * c;
-        }
-    }
-    return vec3(0.0, 0.0, 0.0);
-}
+            if (show_render) {
+                const ImGuiViewport *viewport = ImGui::GetMainViewport();
+                ImGui::SetNextWindowPos(viewport->WorkPos);
+                ImGui::SetNextWindowSize(viewport->WorkSize);
+                ImGui::SetNextWindowViewport(viewport->ID);
+                ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 0.0f);
+                ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize, 0.0f);
+                ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0.0f, 0.0f));
 
-__global__ void rand_init(curandState *rand_state)
-{
-    if (threadIdx.x == 0 && blockIdx.x == 0)
-    {
-        curand_init(1984, 0, 0, rand_state);
-    }
-}
+                ImGuiWindowFlags window_flags = ImGuiWindowFlags_NoDocking | ImGuiWindowFlags_NoTitleBar;
+                window_flags |= ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove;
+                window_flags |= ImGuiWindowFlags_NoBringToFrontOnFocus | ImGuiWindowFlags_NoNavFocus;
 
-__global__ void render_init(int max_x, int max_y, curandState *rand_state)
-{
-    int i = threadIdx.x + blockIdx.x * blockDim.x;
-    int j = threadIdx.y + blockIdx.y * blockDim.y;
-    if ((i >= max_x) || (j >= max_y))
-        return;
-    int pixel_index = j * max_x + i;
-    curand_init(1984, pixel_index, 0, &rand_state[pixel_index]);
-}
+                ImGui::Begin("Image", reinterpret_cast<bool *>(true), window_flags);
+                ImGui::PopStyleVar();
+                ImGui::PopStyleVar(2);
 
-__global__ void render(vec3 *fb, int max_x, int max_y, int ns, camera **cam, hittable **world, curandState *rand_state)
-{
-    int i = threadIdx.x + blockIdx.x * blockDim.x;
-    int j = threadIdx.y + blockIdx.y * blockDim.y;
-    if ((i >= max_x) || (j >= max_y))
-        return;
-    int pixel_index = j * max_x + i;
-
-    curandState local_rand_state = rand_state[pixel_index];
-    vec3 col(0, 0, 0);
-
-    for (int s = 0; s < ns; s++)
-    {
-        float u = float(i + curand_uniform(&local_rand_state)) / float(max_x);
-        float v = float(j + curand_uniform(&local_rand_state)) / float(max_y);
-        ray r = (*cam)->get_ray(u, v, &local_rand_state);
-        col += color(r, world, &local_rand_state);
-    }
-
-    rand_state[pixel_index] = local_rand_state;
-    col /= float(ns);
-    //linear to gamma conversion
-    col[0] = sqrt(col[0]);
-    col[1] = sqrt(col[1]);
-    col[2] = sqrt(col[2]);
-    fb[pixel_index] = col;
-}
-
-#define RND (curand_uniform(&local_rand_state))
-
-__global__ void create_world(hittable **d_list, hittable **d_world, camera **d_camera, int nx, int ny, curandState *rand_state)
-{
-    if (threadIdx.x == 0 && blockIdx.x == 0)
-    {
-        curandState local_rand_state = *rand_state;
-        d_list[0] = new sphere(vec3(0, -1000.0, -1), 1000,
-                               new lambertian(vec3(0.5, 0.5, 0.5)));
-        int i = 1;
-        for (int a = -11; a < 11; a++)
-        {
-            for (int b = -11; b < 11; b++)
-            {
-                float choose_mat = RND;
-                vec3 center(a + RND, 0.2, b + RND);
-                if (choose_mat < 0.8f)
-                {
-                    d_list[i++] = new sphere(center, 0.2,
-                                             new lambertian(vec3(RND * RND, RND * RND, RND * RND)));
-                }
-                else if (choose_mat < 0.95f)
-                {
-                    d_list[i++] = new sphere(center, 0.2,
-                                             new metal(vec3(0.5f * (1.0f + RND), 0.5f * (1.0f + RND), 0.5f * (1.0f + RND)), 0.5f * RND));
-                }
-                else
-                {
-                    d_list[i++] = new sphere(center, 0.2, new dielectric(1.5));
-                }
+                ImVec2 pos = ImGui::GetCursorScreenPos();
+                ImVec2 ws = ImGui::GetContentRegionAvail();
+                int max_x = ws.y * image_aspect_ratio;
+                int centering = (ws.x - max_x) / 2;
+                ImGui::GetWindowDrawList()->AddImage(
+                        reinterpret_cast<ImTextureID>(image),
+                        ImVec2(pos.x + centering, pos.y),
+                        ImVec2(pos.x + max_x + centering, ws.y + pos.y),
+                        ImVec2(0, 1), ImVec2(1, 0));
+                ImGui::End();
             }
         }
-        d_list[i++] = new sphere(vec3(0, 1, 0), 1.0, new dielectric(1.5));
-        d_list[i++] = new sphere(vec3(-4, 1, 0), 1.0, new lambertian(vec3(0.4, 0.2, 0.1)));
-        d_list[i++] = new sphere(vec3(4, 1, 0), 1.0, new metal(vec3(0.7, 0.6, 0.5), 0.0));
-        *rand_state = local_rand_state;
-        *d_world = new hittable_list(d_list, 22 * 22 + 1 + 3);
+        {
+            ImGui::Begin("Renderer");
+            enum Aspect_Ratio { AR43, AR169, Ratio_COUNT };
+            static int ar = AR169;
+            const double aspect_ratios[Ratio_COUNT] = { 4.0 / 3.0, 16.0 / 9.0 };
+            const char* aspect_ratio_names[Ratio_COUNT] = { "4:3", "16:9" };
+            const char* aspect_ratio = (ar >= 0 && ar < Ratio_COUNT) ? aspect_ratio_names[ar] : "Unknown";
 
-        vec3 lookfrom(13, 2, 3);
-        vec3 lookat(0, 0, 0);
-        float dist_to_focus = 10.0;
-        (lookfrom - lookat).length();
-        float aperture = 0.1;
-        *d_camera = new camera(lookfrom,
-                               lookat,
-                               vec3(0, 1, 0),
-                               30.0,
-                               float(nx) / float(ny),
-                               aperture,
-                               dist_to_focus);
+            enum Image_Height { IW720P, IW1080P, IW1440P, IW4K, Height_COUNT };
+            static int ih = IW720P;
+            const int image_heights[Height_COUNT] = { 720, 1080, 1440, 2160 };
+            const char* height = (ih >= 0 && ih < Height_COUNT) ? std::to_string(image_heights[ih]).c_str() : "Unknown";
+
+            if (ImGui::CollapsingHeader("Image Options", ImGuiTreeNodeFlags_DefaultOpen)) {
+                ImGui::SliderInt("Aspect Ratio", &ar, 0, Ratio_COUNT - 1, aspect_ratio);
+                ImGui::SliderInt("Image Height", &ih, 0, Height_COUNT - 1, height);
+            }
+
+            enum SPP { SPP1, SPP10, SPP50, SPP100, SPP500, SPP1000, SPP_COUNT };
+            static int spp = SPP10;
+            const int spp_values[SPP_COUNT] = { 1, 10, 50, 100, 500, 1000 };
+
+            enum Depth { D1, D10, D25, D50, DEPTH_COUNT };
+            static int depth = D50;
+            const int depth_values[DEPTH_COUNT] = { 1, 10, 25, 50 };
+
+            static int cpu_count = std::thread::hardware_concurrency();
+            if (ImGui::CollapsingHeader("Render Options", ImGuiTreeNodeFlags_DefaultOpen)) {
+                const char* spp_name = (spp >= 0 && spp < SPP_COUNT) ? std::to_string(spp_values[spp]).c_str() : "Unknown";
+                ImGui::SliderInt("Samples per Pixel", &spp, 0, SPP_COUNT - 1, spp_name);
+                const char* depth_name = (depth >= 0 && depth < DEPTH_COUNT) ? std::to_string(depth_values[depth]).c_str() : "Unknown";
+                ImGui::SliderInt("Max Depth", &depth, 0, DEPTH_COUNT - 1, depth_name);
+                ImGui::SliderInt("CPU Cores", &cpu_count, 1, std::thread::hardware_concurrency());
+            }
+
+            static int fov = 20;
+            static int look_from[3] = {13,2,3};
+            static int look_at[3] = {0,0,0};
+            static float aperture = 0.6f;
+            if (ImGui::CollapsingHeader("Camera Options", ImGuiTreeNodeFlags_DefaultOpen)) {
+                ImGui::SliderInt("FOV", &fov, 0, 90);
+                ImGui::InputInt3("Camera Position", look_from);
+                ImGui::InputInt3("Focal Point", look_at);
+                ImGui::SliderFloat("Aperture", &aperture, 0, 1.0, "%.1f");
+            }
+            ImGui::NewLine();
+
+            ImVec2 sz = ImVec2(ImGui::GetWindowWidth() * 0.3f, 0.0f);
+            if (ImGui::Button("Render", sz)) {
+                image_aspect_ratio = aspect_ratios[ar];
+                vec3 cam_pos(look_from[0],look_from[1],look_from[2]);
+                vec3 focal_point(look_at[0],look_at[1],look_at[2]);
+
+                cuda_render(image_heights[ih], aspect_ratios[ar], spp_values[spp], depth_values[depth], cam_pos, focal_point, fov, aperture, last_render_time);
+                                
+                image = render_image(std::ceil(image_heights[ih] * aspect_ratios[ar]), image_heights[ih]);
+                show_render = true;
+            }
+            if (last_render_time > 0) {
+                //ImGui::SameLine();
+                ImGui::Text("Last render: %.3fs | %dx%d", last_render_time, image_heights[ih],
+                            (int) std::ceil(image_heights[ih] * aspect_ratios[ar]));
+            }
+            ImGui::End();
+        }
+
+        // Rendering
+        ImGui::Render();
+		
+        ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
+
+        // Update and Render additional Platform Windows
+        // (Platform functions may change the current OpenGL context, so we save/restore it to make it easier to paste this code elsewhere.
+        //  For this specific demo app we could also call glfwMakeContextCurrent(window) directly)
+        if (io.ConfigFlags & ImGuiConfigFlags_ViewportsEnable)
+        {
+            GLFWwindow* backup_current_context = glfwGetCurrentContext();
+            ImGui::UpdatePlatformWindows();
+            ImGui::RenderPlatformWindowsDefault();
+            glfwMakeContextCurrent(backup_current_context);
+        }
+
+        glfwSwapBuffers(window);
+        glfwPollEvents();
     }
-}
 
-__global__ void free_world(hittable **d_list, hittable **d_world, camera **d_camera)
-{
-    for (int i = 0; i < 22 * 22 + 1 + 3; i++)
-    {
-        delete ((sphere *)d_list[i])->mat_ptr;
-        delete d_list[i];
-    }
-    delete *d_world;
-    delete *d_camera;
-}
+    // Cleanup
+    ImGui_ImplOpenGL3_Shutdown();
+    ImGui_ImplGlfw_Shutdown();
+    ImGui::DestroyContext();
+	
+	glfwDestroyWindow(window);
+    glfwTerminate();
 
-int main()
-{
-    int nx = 1920;
-    float aspect_ratio = 16.0/9.0;
-    int ny = nx / aspect_ratio;
-    int ns = 10; // Number of samples
-    int tx = 8;
-    int ty = 8;
-
-    std::cerr << "Rendering a " << nx << "x" << ny << " image with " << ns << " samples per pixel ";
-    std::cerr << "in " << tx << "x" << ty << " blocks.\n";
-
-    int num_pixels = nx * ny;
-    size_t fb_size = num_pixels * sizeof(vec3);
-
-    // allocate FB
-    vec3 *fb;
-    checkCudaErrors(cudaMallocManaged((void **)&fb, fb_size));
-
-    // allocate random state
-    curandState *d_rand_state;
-    checkCudaErrors(cudaMalloc((void **)&d_rand_state, num_pixels * sizeof(curandState)));
-    curandState *d_rand_state2;
-    checkCudaErrors(cudaMalloc((void **)&d_rand_state2, 1 * sizeof(curandState)));
-    
-    // we need that 2nd random state to be initialized for the world creation
-    rand_init<<<1, 1>>>(d_rand_state2);
-    checkCudaErrors(cudaGetLastError());
-    checkCudaErrors(cudaDeviceSynchronize());
-
-    // make our world of hitables
-    hittable **d_list;
-    int num_hittables = 22 * 22 + 1 + 3;
-    checkCudaErrors(cudaMalloc((void **)&d_list, num_hittables * sizeof(hittable *)));
-    hittable **d_world;
-    checkCudaErrors(cudaMalloc((void **)&d_world, sizeof(hittable *)));
-    camera **d_camera;
-    checkCudaErrors(cudaMalloc((void **)&d_camera, sizeof(camera *)));
-    create_world<<<1, 1>>>(d_list, d_world, d_camera, nx, ny, d_rand_state2);
-    checkCudaErrors(cudaGetLastError());
-    checkCudaErrors(cudaDeviceSynchronize());
-
-    clock_t start, stop;
-    start = clock();
-    // Render our buffer
-    dim3 blocks(nx / tx + 1, ny / ty + 1);
-    dim3 threads(tx, ty);
-
-    render_init<<<blocks, threads>>>(nx, ny, d_rand_state);
-    checkCudaErrors(cudaGetLastError());
-    checkCudaErrors(cudaDeviceSynchronize());
-
-    render<<<blocks, threads>>>(fb, nx, ny, ns, d_camera, d_world, d_rand_state);
-    checkCudaErrors(cudaGetLastError());
-    checkCudaErrors(cudaDeviceSynchronize());
-
-    stop = clock();
-    double timer_seconds = ((double)(stop - start)) / CLOCKS_PER_SEC;
-    std::cerr << "took " << timer_seconds << " seconds.\n";
-
-    write_color(fb, nx, ny);
-
-    // clean up
-    checkCudaErrors(cudaDeviceSynchronize());
-    free_world<<<1, 1>>>(d_list, d_world, d_camera);
-    checkCudaErrors(cudaGetLastError());
-    checkCudaErrors(cudaFree(d_list));
-    checkCudaErrors(cudaFree(d_world));
-    checkCudaErrors(cudaFree(d_camera));
-    checkCudaErrors(cudaFree(fb));
-
-    // useful for cuda-memcheck --leak-check full
-    cudaDeviceReset();
+    return 0;
 }
