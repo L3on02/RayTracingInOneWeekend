@@ -7,9 +7,6 @@
 #include <imgui_impl_glfw.h>
 #include <imgui_impl_opengl3.h>
 
-#define STB_IMAGE_IMPLEMENTATION
-#include <stb_image.h>
-
 #include <filesystem>
 
 #include "rtweekend.hh"
@@ -359,7 +356,6 @@ int main() {
                 ImGui::InputInt3("Camera Position", look_from);
                 ImGui::InputInt3("Focus Point", look_at);
                 ImGui::SliderAngle("Defocus Angle", &defocus_angle, 0, 180);
-                ImGui::InputDouble("Focal Length", &focal_length, 0, 0, "%.1f");
             }
             ImGui::NewLine();
 
@@ -378,7 +374,7 @@ int main() {
                 cam.vup = vec3(0,1,0);
 
                 cam.defocus_angle = defocus_angle;
-                cam.focus_dist = focal_length;
+                cam.focus_dist = (cam.lookfrom - cam.lookat).length();
 
                 cam.render(world);
                 image = render_image(std::ceil(cam.image_height * cam.aspect_ratio), cam.image_height);
