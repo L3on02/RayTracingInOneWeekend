@@ -36,7 +36,7 @@ GLFWwindow *create_window(int height, double aspect_ratio)
     glEnable(GL_MULTISAMPLE);
 
     std::ostringstream title;
-    title << "ParallelSystems - (" << width << "x" << height << ")";
+    title << "Raytracer - (" << width << "x" << height << ")";
 
     return glfwCreateWindow(width, height, title.str().c_str(), nullptr, nullptr);
 }

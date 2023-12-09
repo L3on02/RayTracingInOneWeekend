@@ -7,7 +7,7 @@ int main()
 {
     glfwSetErrorCallback(errorCallback);
 
-    int window_height = 720;
+    int window_height = 1080;
     auto window = create_window(window_height, 16.0 / 9.0);
     if (!window)
     {
