@@ -12,7 +12,8 @@
 #include <fstream>
 #include <sstream>
 
-GLFWwindow* create_window(int height, double aspect_ratio) {
+GLFWwindow *create_window(int height, double aspect_ratio)
+{
     int width = std::ceil(height * aspect_ratio);
 
     glfwInit();
@@ -27,7 +28,7 @@ GLFWwindow* create_window(int height, double aspect_ratio) {
     glfwWindowHint(GLFW_STENCIL_BITS, 8);
     glfwWindowHint(GLFW_DEPTH_BITS, 24);
     glfwWindowHint(GLFW_RESIZABLE, true);
-    //glfwWindowHint(GLFW_DECORATED, false);
+    // glfwWindowHint(GLFW_DECORATED, false);
     glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);
 
     // Anti Aliasing - Multisampling
@@ -40,47 +41,55 @@ GLFWwindow* create_window(int height, double aspect_ratio) {
     return glfwCreateWindow(width, height, title.str().c_str(), nullptr, nullptr);
 }
 
-void handleEvents(GLFWwindow* window) {
-    if(glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS || glfwGetKey(window, GLFW_KEY_Q) == GLFW_PRESS) {
+void handleEvents(GLFWwindow *window)
+{
+    if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS || glfwGetKey(window, GLFW_KEY_Q) == GLFW_PRESS)
+    {
         glfwSetWindowShouldClose(window, true);
     }
 }
 
-void frameBufferSizeCallback(GLFWwindow* window, int width, int height) {
+void frameBufferSizeCallback(GLFWwindow *window, int width, int height)
+{
     glfwMakeContextCurrent(window);
     glViewport(0, 0, width, height);
 }
 
 bool show_render = false;
 
-void keyCallback(GLFWwindow* window, int key, int scancode, int action, int mods) {
-	if (key == GLFW_KEY_R && action == GLFW_PRESS) {
-		show_render = !show_render;
-	}
+void keyCallback(GLFWwindow *window, int key, int scancode, int action, int mods)
+{
+    if (key == GLFW_KEY_R && action == GLFW_PRESS)
+    {
+        show_render = !show_render;
+    }
 }
 
-static void errorCallback(int error, const char* description) {
+static void errorCallback(int error, const char *description)
+{
     fprintf(stderr, "GLFW Error %d: %s\n", error, description);
 }
 
-ImGuiIO& setupImGUI(GLFWwindow* window) {
+ImGuiIO &setupImGUI(GLFWwindow *window)
+{
     // Setup Dear ImGui context
     IMGUI_CHECKVERSION();
     ImGui::CreateContext();
-    ImGuiIO& io = ImGui::GetIO(); (void)io;
-    io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;     // Enable Keyboard Controls
-    io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;      // Enable Gamepad Controls
-    io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;         // Enable Docking
-    io.ConfigFlags |= ImGuiConfigFlags_ViewportsEnable;       // Enable Multi-Viewport / Platform Windows
-    //io.ConfigViewportsNoAutoMerge = true;
-    //io.ConfigViewportsNoTaskBarIcon = true;
+    ImGuiIO &io = ImGui::GetIO();
+    (void)io;
+    io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard; // Enable Keyboard Controls
+    io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;  // Enable Gamepad Controls
+    io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;     // Enable Docking
+    io.ConfigFlags |= ImGuiConfigFlags_ViewportsEnable;   // Enable Multi-Viewport / Platform Windows
+    // io.ConfigViewportsNoAutoMerge = true;
+    // io.ConfigViewportsNoTaskBarIcon = true;
 
     // Setup Dear ImGui style
     ImGui::StyleColorsDark();
-    //ImGui::StyleColorsLight();
+    // ImGui::StyleColorsLight();
 
     // When viewports are enabled we tweak WindowRounding/WindowBg so platform windows can look identical to regular ones.
-    ImGuiStyle& style = ImGui::GetStyle();
+    ImGuiStyle &style = ImGui::GetStyle();
     if (io.ConfigFlags & ImGuiConfigFlags_ViewportsEnable)
     {
         style.WindowRounding = 0.0f;
@@ -88,23 +97,26 @@ ImGuiIO& setupImGUI(GLFWwindow* window) {
     }
 
     // Setup Platform/Renderer backends
-    const char* glsl_version = "#version 330";
+    const char *glsl_version = "#version 330";
     ImGui_ImplGlfw_InitForOpenGL(window, true);
     ImGui_ImplOpenGL3_Init(glsl_version);
 
     return io;
 }
 
-void render() {
-    //clear color and depth buffer
+void render()
+{
+    // clear color and depth buffer
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 }
 
-GLubyte* read_ppm(const char* filename, int* width, int* height) {
+GLubyte *read_ppm(const char *filename, int *width, int *height)
+{
     GLubyte *texture; // The texture image
     std::ifstream file;
     file.open(filename, std::ios::in);
-    if (file.fail()) {
+    if (file.fail())
+    {
         std::cerr << "Error loading the texture" << std::endl;
     }
     std::string skip;
@@ -117,26 +129,29 @@ GLubyte* read_ppm(const char* filename, int* width, int* height) {
     texture = new GLubyte[texture_width * texture_height * 4];
 
     int m, n, c;
-    for(m = texture_height - 1; m >= 0; m--) {
-        for (n = 0; n < texture_width; n++) {
+    for (m = texture_height - 1; m >= 0; m--)
+    {
+        for (n = 0; n < texture_width; n++)
+        {
             file >> c;
-            texture[(m * texture_width + n) * 4] = (GLubyte) c;
+            texture[(m * texture_width + n) * 4] = (GLubyte)c;
             file >> c;
-            texture[(m * texture_width + n) * 4 + 1] = (GLubyte) c;
+            texture[(m * texture_width + n) * 4 + 1] = (GLubyte)c;
             file >> c;
-            texture[(m * texture_width + n) * 4 + 2] = (GLubyte) c;
-            texture[(m * texture_width + n) * 4 + 3] = (GLubyte) 255;
+            texture[(m * texture_width + n) * 4 + 2] = (GLubyte)c;
+            texture[(m * texture_width + n) * 4 + 3] = (GLubyte)255;
         }
     }
     file.close();
     return texture;
 }
 
-GLuint render_image(int width, int height) {
-    std::string filename = "/home/lmaag/RayTracingInOneWeekend/build-cuda/out.ppm";//std::filesystem::current_path().string().append("/image.ppm").c_str();
-    GLubyte* image_data = read_ppm(filename.c_str(), &width, &height);
+GLuint render_image(int width, int height)
+{
+    std::string filename = "/home/lmaag/RayTracingInOneWeekend/build-cuda/out.ppm"; // std::filesystem::current_path().string().append("/image.ppm").c_str();
+    GLubyte *image_data = read_ppm(filename.c_str(), &width, &height);
 
-    glPixelStorei( GL_UNPACK_ALIGNMENT, 1 );
+    glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
 
     // Create a OpenGL texture identifier
     GLuint texture;

@@ -8,11 +8,13 @@
 
 using color = vec3;
 
-inline double linear_to_gamma(double linear_component) {
+inline double linear_to_gamma(double linear_component)
+{
     return sqrt(linear_component);
 }
 
-void write_color(color* image, int image_width, int image_height, int samples_per_pixel) {
+void write_color(color *image, int image_width, int image_height, int samples_per_pixel)
+{
     std::ofstream out("out.ppm");
     // write ppm header
     out.write("P3\n", 3);
@@ -22,7 +24,8 @@ void write_color(color* image, int image_width, int image_height, int samples_pe
     out.write("\n", 1);
     out.write("255\n", 4);
 
-    for(int i = 0; i < image_width * image_height; i++) {
+    for (int i = 0; i < image_width * image_height; i++)
+    {
         color pixel_color = image[i];
         auto r = pixel_color.x();
         auto g = pixel_color.y();
@@ -38,7 +41,7 @@ void write_color(color* image, int image_width, int image_height, int samples_pe
         r = linear_to_gamma(r);
         g = linear_to_gamma(g);
         b = linear_to_gamma(b);
-    
+
         // Write the translated [0,255] value of each color component.
         static const interval intensity(0.000, 0.999);
         out << static_cast<int>(256 * intensity.clamp(r)) << ' '

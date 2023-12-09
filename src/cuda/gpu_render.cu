@@ -99,7 +99,7 @@ __global__ void render(vec3 *fb, int max_x, int max_y, int ns, camera **cam, hit
 
     rand_state[pixel_index] = local_rand_state;
     col /= float(ns);
-    //linear to gamma conversion
+    // linear to gamma conversion
     col[0] = sqrt(col[0]);
     col[1] = sqrt(col[1]);
     col[2] = sqrt(col[2]);
@@ -109,7 +109,7 @@ __global__ void render(vec3 *fb, int max_x, int max_y, int ns, camera **cam, hit
 #define RND (curand_uniform(&local_rand_state))
 
 __global__ void create_world(hittable **d_list, hittable **d_world, camera **d_camera, int nx, int ny, curandState *rand_state,
-                            vec3 camera_pos, vec3 focal_point, float aspect_ratio, float vfov, float defocus_angle)
+                             vec3 camera_pos, vec3 focal_point, float aspect_ratio, float vfov, float defocus_angle)
 {
     if (threadIdx.x == 0 && blockIdx.x == 0)
     {
@@ -168,8 +168,8 @@ __global__ void free_world(hittable **d_list, hittable **d_world, camera **d_cam
     delete *d_camera;
 }
 
-
-void gpu_render(int ny, float aspect_ratio, int ns, int max_depth, point _camera_pos, point _focal_point, float vfov, float aperture, double &last_render_time) {
+void gpu_render(int ny, float aspect_ratio, int ns, int max_depth, point _camera_pos, point _focal_point, float vfov, float aperture, double &last_render_time)
+{
     vec3 camera_pos(_camera_pos.x, _camera_pos.y, _camera_pos.z);
     vec3 focal_point(_focal_point.x, _focal_point.y, _focal_point.z);
 
@@ -192,7 +192,7 @@ void gpu_render(int ny, float aspect_ratio, int ns, int max_depth, point _camera
     checkCudaErrors(cudaMalloc((void **)&d_rand_state, num_pixels * sizeof(curandState)));
     curandState *d_rand_state2;
     checkCudaErrors(cudaMalloc((void **)&d_rand_state2, 1 * sizeof(curandState)));
-    
+
     // we need that 2nd random state to be initialized for the world creation
     rand_init<<<1, 1>>>(d_rand_state2);
     checkCudaErrors(cudaGetLastError());
@@ -207,7 +207,7 @@ void gpu_render(int ny, float aspect_ratio, int ns, int max_depth, point _camera
     camera **d_camera;
     checkCudaErrors(cudaMalloc((void **)&d_camera, sizeof(camera *)));
     create_world<<<1, 1>>>(d_list, d_world, d_camera, nx, ny, d_rand_state2,
-                            camera_pos, focal_point, aspect_ratio, vfov, aperture);
+                           camera_pos, focal_point, aspect_ratio, vfov, aperture);
     checkCudaErrors(cudaGetLastError());
     checkCudaErrors(cudaDeviceSynchronize());
 
@@ -243,4 +243,3 @@ void gpu_render(int ny, float aspect_ratio, int ns, int max_depth, point _camera
     // useful for cuda-memcheck --leak-check full
     cudaDeviceReset();
 }
-

@@ -29,10 +29,10 @@ public:
     {
         vec3 rand_in_unit = random_in_unit_disk(local_rand_state);
         vec3 offset = rand_in_unit[0] * defocus_disk_u + rand_in_unit[1] * defocus_disk_v;
-        
+
         vec3 ray_origin = origin + offset;
-        vec3 ray_direction =  lower_left_corner + s * horizontal + t * vertical - ray_origin;
-        
+        vec3 ray_direction = lower_left_corner + s * horizontal + t * vertical - ray_origin;
+
         return ray(ray_origin, ray_direction);
     }
 
