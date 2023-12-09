@@ -126,7 +126,7 @@ int main()
                 IW4K,
                 Height_COUNT
             };
-            static int ih = IW720P;
+            static int ih = IW1080P;
             const int image_heights[Height_COUNT] = {720, 1080, 1440, 2160};
             const char *height = (ih >= 0 && ih < Height_COUNT) ? std::to_string(image_heights[ih]).c_str() : "Unknown";
 
