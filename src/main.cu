@@ -146,12 +146,12 @@ int main() {
             static int fov = 20;
             static int look_from[3] = {13,2,3};
             static int look_at[3] = {0,0,0};
-            static float aperture = 0.6f;
+            static float defocus_angle = 0.6f;
             if (ImGui::CollapsingHeader("Camera Options", ImGuiTreeNodeFlags_DefaultOpen)) {
                 ImGui::SliderInt("FOV", &fov, 0, 90);
                 ImGui::InputInt3("Camera Position", look_from);
                 ImGui::InputInt3("Focal Point", look_at);
-                ImGui::SliderFloat("Aperture", &aperture, 0, 1.0, "%.1f");
+                ImGui::SliderFloat("Defocus Angle", &defocus_angle, 0, 1.0, "%.1f");
             }
             ImGui::NewLine();
 
@@ -163,9 +163,9 @@ int main() {
                 point focal_point = {look_at[0],look_at[1],look_at[2]};
 
                 if(render_on_device)
-                    gpu_render(image_heights[ih], aspect_ratios[ar], spp_values[spp], depth_values[depth], cam_pos, focal_point, fov, aperture, last_render_time);
+                    gpu_render(image_heights[ih], aspect_ratios[ar], spp_values[spp], depth_values[depth], cam_pos, focal_point, fov, defocus_angle, last_render_time);
                 else
-                    cpu_render(image_heights[ih], aspect_ratios[ar], spp_values[spp], depth_values[depth], cam_pos, focal_point, fov, aperture, last_render_time);
+                    cpu_render(image_heights[ih], aspect_ratios[ar], spp_values[spp], depth_values[depth], cam_pos, focal_point, fov, defocus_angle, last_render_time);
                     // void cpu_render(double _aspect_ratio, int _image_height, int _samples_per_pixel, int _max_depth, double _vfov, point _cam_pos, point _focal_point, double _aperture);
                                 
                 image = render_image(std::ceil(image_heights[ih] * aspect_ratios[ar]), image_heights[ih]);

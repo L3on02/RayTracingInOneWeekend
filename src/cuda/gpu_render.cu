@@ -147,13 +147,12 @@ __global__ void create_world(hittable **d_list, hittable **d_world, camera **d_c
 
         vec3 cam_up(0, 1, 0);
         float focal_length = (camera_pos - focal_point).length();
-        float aperture = defocus_angle;//focal_length * tan(defocus_angle * M_PI / 360.0f);
         *d_camera = new camera(camera_pos,
                                focal_point,
                                cam_up,
                                vfov,
                                aspect_ratio,
-                               aperture,
+                               defocus_angle,
                                focal_length);
     }
 }
