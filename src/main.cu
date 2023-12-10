@@ -207,7 +207,7 @@ int main()
                 if (render_on_device)
                     gpu_render(image_heights[ih], aspect_ratios[ar], spp_values[spp], depth_values[depth], cam_pos, focal_point, fov, defocus_angle, last_render_time);
                 else
-                    cpu_render(image_heights[ih], aspect_ratios[ar], spp_values[spp], depth_values[depth], cam_pos, focal_point, fov, defocus_angle, last_render_time);
+                    cpu_render(image_heights[ih], aspect_ratios[ar], spp_values[spp], depth_values[depth], cam_pos, focal_point, fov, defocus_angle, cpu_count, last_render_time);
                 // void cpu_render(double _aspect_ratio, int _image_height, int _samples_per_pixel, int _max_depth, double _vfov, point _cam_pos, point _focal_point, double _aperture);
 
                 image = render_image(std::ceil(image_heights[ih] * aspect_ratios[ar]), image_heights[ih]);

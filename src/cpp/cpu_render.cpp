@@ -8,7 +8,7 @@
 #include "material.hh"
 
 void cpu_render(int _image_height, double _aspect_ratio, int _samples_per_pixel, int _max_depth,
-                point t_cam_pos, point t_focal_point, double _vfov, double _defocus_angle, double &last_render_time)
+                point t_cam_pos, point t_focal_point, double _vfov, double _defocus_angle, int cpu_count, double &last_render_time)
 {
 
     point3 _cam_pos(t_cam_pos.x, t_cam_pos.y, t_cam_pos.z);
@@ -23,6 +23,7 @@ void cpu_render(int _image_height, double _aspect_ratio, int _samples_per_pixel,
     cam.lookfrom = _cam_pos;
     cam.lookat = _focal_point;
     cam.defocus_angle = _defocus_angle;
+    cam.processor_count = cpu_count;
 
     cam.vup = vec3(0, 1, 0);
     cam.focus_dist = (_cam_pos - _focal_point).length();
