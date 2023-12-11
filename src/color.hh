@@ -2,6 +2,7 @@
 #define COLOR_HH
 
 #include "vec3.hh"
+#include "interval.hh"
 
 #include <fstream>
 #include <vector>
