@@ -4,7 +4,7 @@
 
 This repository is a modified version of the "Raytracing in One Weekend" tutorial, featuring additional enhancements, multi-threading, GPU support with CUDA and a simple GUI made with Dear ImGui.
 
-![GUI screenshot](guiScreenshot.png)
+![GUI screenshot](GUIScreenshot.png)
 
 ## other relevant Branches
 - `plain`: Plain Raytracing in One Weekend project with output directly to a .ppm file.
